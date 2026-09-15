@@ -437,3 +437,174 @@ Superseded by AD-044. Phase 4 sleeps at shelter access. Household ownership rema
 
 ### OD-013 — Character movement costs and occupancy
 Buildings occupy and can block cells (AD-043). Characters still do not occupy cells. Terrain movement costs remain undecided.
+
+## AD-045 — Direct character control through simulation commands
+
+**Status:** Accepted
+
+**Decision**
+
+Players control individual characters through contextual commands.
+
+The player selects a character by `CharacterId`, receives a context-sensitive list of currently available actions, and issues a player command through the Application/Domain simulation layer.
+
+The UI must never directly mutate `CharacterState`.
+
+**Reason**
+
+Direct individual character control is a fundamental gameplay mechanic of Kinlands, inherited conceptually from the original Cultures control model.
+
+At the same time, characters are autonomous simulated individuals and must remain compatible with autonomous AI.
+
+Therefore player control and autonomous behaviour must use the same activity/action infrastructure.
+
+Conceptually:
+
+```text
+Autonomous AI ────────┐
+                      ↓
+                 Character Activity
+                      ↑
+Player Command ───────┘
+```
+
+This prevents the creation of two incompatible character-control systems.
+
+---
+
+## AD-046 — Character selection uses persistent CharacterId
+
+**Status:** Accepted
+
+**Decision**
+
+Presentation-level character selection identifies the selected character through `CharacterId`.
+
+Godot nodes are visual representations and are not authoritative character identity.
+
+**Reason**
+
+Characters persist for long periods and will eventually participate in:
+
+* families;
+* inheritance;
+* skills;
+* professions;
+* relationships;
+* politics;
+* historical events;
+* save/load.
+
+A stable identity must therefore remain independent of presentation objects.
+
+---
+
+## AD-047 — Contextual action availability is evaluated dynamically
+
+**Status:** Accepted
+
+**Decision**
+
+The list of actions shown for a selected character is dynamically generated from current simulation state.
+
+Action availability may depend on:
+
+* character state;
+* age;
+* needs;
+* skills;
+* activity;
+* position;
+* nearby entities;
+* terrain;
+* buildings;
+* future relationships, profession, culture and political state.
+
+**Reason**
+
+Kinlands is intended to have a large number of context-sensitive interactions.
+
+A static menu would either expose invalid actions or require increasingly complex UI-side conditionals.
+
+---
+
+## AD-048 — UI availability does not guarantee command validity
+
+**Status:** Accepted
+
+**Decision**
+
+Every player command must be validated by the authoritative simulation when executed.
+
+The availability of an action in the UI is only a snapshot.
+
+**Reason**
+
+The simulation can change between menu opening and command execution.
+
+Examples:
+
+* another character occupies a workplace;
+* a building is destroyed;
+* the target moves;
+* the character becomes incapacitated;
+* the world state changes.
+
+The simulation must therefore remain authoritative.
+
+---
+
+## AD-049 — Player commands temporarily override autonomous activity
+
+**Status:** Accepted
+
+**Decision**
+
+A valid direct player command has higher immediate priority than ordinary autonomous decision-making.
+
+The command may replace or interrupt the current activity according to action-specific rules.
+
+After the command reaches a terminal state, autonomous behaviour can resume.
+
+**Reason**
+
+Direct control must feel responsive and predictable while preserving the autonomous character simulation.
+
+---
+
+## AD-050 — Player control does not equal character possession
+
+**Status:** Accepted
+
+**Decision**
+
+The player gives instructions to characters rather than directly possessing them.
+
+Characters remain autonomous simulated individuals.
+
+**Reason**
+
+This preserves the core design philosophy of Kinlands:
+
+> The player manages and influences a living society rather than manually puppeteering every simulated person.
+
+This distinction becomes increasingly important as families, personalities, skills, politics and social relationships are implemented.
+
+---
+
+## OD-014 — Exact command queue and interruption rules
+
+**Status:** Open
+
+The architecture must support future command queues, cancellation, priorities and interruption.
+
+The exact gameplay rules are not yet fixed.
+
+Examples requiring future design:
+
+* whether a player command can be queued;
+* whether critical hunger interrupts an explicit command;
+* whether a command can be marked persistent;
+* whether repeated commands become a routine;
+* how long autonomous AI remains suppressed;
+* how commands behave when their target disappears.

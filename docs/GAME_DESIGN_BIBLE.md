@@ -571,3 +571,300 @@ The first goal is not "many features".
 The first goal is:
 
 > A small group of people lives, works, learns, consumes resources, forms relationships and changes over time inside a persistent world.
+
+# PLAYER CHARACTER CONTROL
+
+## Overview
+
+Kinlands combines autonomous character simulation with direct player commands.
+
+Characters are independent simulated individuals with their own needs, activities, relationships, skills and future personal histories. However, the player must be able to directly intervene in the life of an individual character.
+
+The player interaction model is inspired by the original Cultures series:
+
+1. The player selects an individual character by clicking them.
+2. The selected character becomes the active interaction target.
+3. A contextual action menu is opened for that character.
+4. The menu presents actions currently available to that character.
+5. The player selects an action.
+6. The command is passed into the authoritative simulation.
+7. The character performs the command through the normal activity/action system.
+
+Direct player control is therefore not a separate simulation system. It is a higher-priority source of commands for the same character activity system used by autonomous AI.
+
+---
+
+## Character Selection
+
+Characters are selectable individually.
+
+The player must be able to:
+
+* click a character;
+* see which character is selected;
+* inspect basic character information;
+* open the character's contextual action menu;
+* issue direct commands;
+* cancel or replace an existing command.
+
+Selection is a presentation/input concept and must not become part of the authoritative character simulation state unless required for multiplayer/replay purposes in the future.
+
+---
+
+## Contextual Action Menu
+
+The available actions are contextual.
+
+The game must not display every possible action for every character.
+
+Available actions depend on factors such as:
+
+* character state;
+* character age;
+* character skills;
+* character needs;
+* current activity;
+* current location;
+* nearby terrain;
+* nearby buildings;
+* nearby resources;
+* nearby characters;
+* character relationships;
+* available workplaces;
+* ownership/access rules;
+* future faction/cultural rules.
+
+Example:
+
+A child should not receive an action such as "Teach Craft".
+
+A character without sufficient skill should not receive advanced teaching actions.
+
+An action involving a nearby resource should not be offered when no valid target exists.
+
+The action menu therefore represents the actions the simulation considers valid for the selected character at that moment.
+
+---
+
+## Example Actions
+
+The exact final action catalogue is not fixed.
+
+Potential actions include:
+
+### Movement
+
+* Go to location
+* Follow character
+* Return home
+
+### Work
+
+* Work at building
+* Work at specific workplace
+* Gather resource
+* Perform specific profession task
+
+### Needs
+
+* Eat
+* Sleep
+* Rest
+* Seek shelter
+
+### Social
+
+* Talk
+* Follow
+* Invite
+* Teach
+* Learn
+* Visit
+
+### Objects / Environment
+
+* Gather
+* Pick up
+* Drop
+* Transport
+* Interact with building
+* Hunt
+* Fish
+
+### Future management
+
+* Assign workplace
+* Assign profession
+* Appoint to position
+* Join group
+* Lead group
+* Become commander
+* Become representative
+
+These actions are examples of the extensible system, not a requirement to implement them all at once.
+
+---
+
+## Direct Commands vs Autonomous Behaviour
+
+A character normally acts autonomously.
+
+For example:
+
+```text
+Hunger rises
+    ↓
+Character decides to obtain food
+    ↓
+Character finds food
+    ↓
+Character eats
+```
+
+If the player intervenes:
+
+```text
+Player selects character
+    ↓
+Player chooses "Go to Farm"
+    ↓
+Player command is issued
+    ↓
+Character executes command
+```
+
+The player command temporarily takes precedence over autonomous decision-making.
+
+After a command finishes, is cancelled, or becomes invalid, the character should be able to return to autonomous behaviour.
+
+---
+
+## Command Interruption
+
+Player commands may interrupt an existing activity.
+
+For example:
+
+```text
+Character is working
+        ↓
+Player orders movement
+        ↓
+Work activity interrupted
+        ↓
+Character moves
+        ↓
+Command completed
+        ↓
+Autonomous AI resumes
+```
+
+The exact interruption rules are not final and must be designed per action type.
+
+Critical survival needs may also invalidate or interrupt player commands in the future.
+
+---
+
+## Player Control Is Not Character Possession
+
+The player does not permanently "possess" characters.
+
+Characters remain autonomous simulated people.
+
+Direct control represents:
+
+> the player giving instructions to an individual.
+
+This distinction is important for the identity and simulation philosophy of Kinlands.
+
+The player is an overseer capable of intervening in individual lives, not a supernatural force that completely replaces their agency.
+
+---
+
+## Long-Term Design Goal
+
+The player should be able to choose their preferred level of micromanagement.
+
+A player may:
+
+### Micromanage individuals
+
+Select specific people and personally instruct them.
+
+### Manage workplaces
+
+Assign people to buildings and let them determine individual actions.
+
+### Manage the settlement
+
+Set priorities and policies while characters handle everyday activity.
+
+### Observe
+
+Allow the simulation to operate mostly autonomously.
+
+All four modes should operate on the same underlying character simulation.
+
+---
+
+## Architectural Principle
+
+The UI must never directly modify authoritative character state.
+
+Conceptually:
+
+```text
+Player Input
+    ↓
+Character Selection
+    ↓
+Context Action Provider
+    ↓
+Player Command
+    ↓
+Application Layer
+    ↓
+Simulation
+    ↓
+Character Activity
+```
+
+Never:
+
+```text
+UI
+ ↓
+CharacterState.Position = ...
+```
+
+or:
+
+```text
+UI
+ ↓
+CharacterState.Inventory.Add(...)
+```
+
+The simulation must remain authoritative.
+
+---
+
+## Future Expansion
+
+The contextual action system must eventually support actions involving:
+
+* buildings;
+* resources;
+* animals;
+* other characters;
+* families;
+* workplaces;
+* professions;
+* education;
+* diplomacy;
+* military units;
+* politics;
+* ownership;
+* cultural/faction preferences.
+
+The action system must therefore be extensible and must not be designed around a fixed list of UI buttons.

@@ -345,3 +345,369 @@ Browser support is not a current requirement.
 ## 26. Architectural rule
 
 A future feature must first be represented as a domain concept and contract before being implemented as UI.
+
+# PLAYER COMMANDS AND CHARACTER INTERACTION
+
+## Purpose
+
+Kinlands requires direct individual character control while preserving autonomous simulation.
+
+Player commands must therefore be implemented as commands entering the same authoritative simulation pipeline used by other application-level operations.
+
+The presentation layer must never directly mutate domain state.
+
+---
+
+## Architectural Flow
+
+The intended flow is:
+
+```text
+Godot Input
+    ↓
+Selection System
+    ↓
+Context Action Provider
+    ↓
+Player Command
+    ↓
+Command Processor / Application Layer
+    ↓
+Domain Validation
+    ↓
+Character Activity / Simulation State
+    ↓
+Simulation Tick
+```
+
+The exact class names may evolve, but the separation must remain.
+
+---
+
+## Character Selection
+
+Selection is a presentation/application concern.
+
+The selected character is identified by:
+
+```text
+CharacterId
+```
+
+The UI should retain the selected `CharacterId` rather than a direct reference to a Godot node as the authoritative identity.
+
+Godot nodes are visual representations.
+
+`CharacterId` identifies the simulated individual.
+
+---
+
+## Context Action Provider
+
+Introduce an abstraction capable of determining which player actions are currently available for a selected character.
+
+Conceptually:
+
+```text
+ICharacterActionProvider
+```
+
+or an equivalent abstraction.
+
+Input:
+
+```text
+CharacterId
++
+current simulation context
+```
+
+Output:
+
+```text
+AvailableCharacterAction[]
+```
+
+An available action should contain enough information for the presentation layer to display it and issue the appropriate command.
+
+The provider must not mutate simulation state.
+
+---
+
+## Action Availability
+
+Availability should be determined by domain/application rules.
+
+Examples:
+
+```text
+Character age
+Character skills
+Character activity
+Character needs
+Character position
+Nearby terrain
+Nearby buildings
+Nearby resources
+Nearby characters
+```
+
+Future conditions may include:
+
+```text
+Family relationships
+Faction
+Culture
+Profession
+Political status
+Ownership
+Technology
+Diplomatic state
+```
+
+Do not implement these future conditions now, but do not architect the system so that they require rewriting the action menu.
+
+---
+
+## Player Command
+
+A player command identifies:
+
+* the command type;
+* the target `CharacterId`;
+* optional target entity/location;
+* any required parameters.
+
+Conceptually:
+
+```text
+MoveCharacterCommand
+WorkAtBuildingCommand
+EatCommand
+SleepCommand
+TalkToCharacterCommand
+CancelCharacterCommand
+```
+
+Only commands relevant to implemented mechanics should exist in the current phase.
+
+---
+
+## Command Validation
+
+A command must be validated when it enters the simulation.
+
+The fact that an action was available when the menu was displayed does not guarantee that it remains valid when the player clicks it.
+
+Example:
+
+```text
+Menu opened
+    ↓
+"Work at Farm" available
+    ↓
+Another simulation tick
+    ↓
+Farm becomes unavailable
+    ↓
+Player clicks
+    ↓
+Command validation fails
+```
+
+The command must fail safely.
+
+The UI must never be treated as proof that an action is valid.
+
+---
+
+## Command Execution
+
+Successful commands should modify the character's activity through the authoritative simulation/application layer.
+
+Example:
+
+```text
+MoveCharacterCommand
+    ↓
+validate target
+    ↓
+calculate/assign movement activity
+    ↓
+GridNavigator
+    ↓
+CharacterActivity.Move
+```
+
+The presentation layer only displays the result.
+
+---
+
+## Player Priority
+
+Player commands have higher immediate priority than ordinary autonomous decision-making.
+
+Conceptually:
+
+```text
+Character
+ ├── AutonomousDecision
+ └── PlayerCommand
+          ↑
+       higher priority
+```
+
+A player command may:
+
+* replace an autonomous activity;
+* interrupt an existing activity;
+* assign a new target;
+* temporarily suppress autonomous decision-making.
+
+The exact priority/interrupt rules must be explicit rather than implemented through ad-hoc conditionals.
+
+---
+
+## Autonomous AI Resumption
+
+Player control must not permanently disable autonomous simulation.
+
+Every player-controlled activity should have a defined termination state.
+
+Possible outcomes:
+
+```text
+Completed
+Cancelled
+Failed
+Invalidated
+Interrupted
+```
+
+After an appropriate terminal state, the character returns to autonomous decision-making unless another player command is active.
+
+---
+
+## Command Queue
+
+The architecture should support future command queues even if Phase 4 implements only one active player command.
+
+Future example:
+
+```text
+Move
+ ↓
+Gather
+ ↓
+Return to Storage
+ ↓
+Deposit
+ ↓
+Return to Work
+```
+
+Do not hard-code the assumption that a character can only ever receive one lifetime action at a time.
+
+---
+
+## Contextual Actions Are Not UI Buttons
+
+An action is a domain/application concept.
+
+The UI is only one possible presentation of available actions.
+
+The same action system should eventually be usable by:
+
+* mouse context menus;
+* keyboard shortcuts;
+* selection panels;
+* future controller input;
+* scripted scenarios;
+* tutorials;
+* potentially AI or replay systems.
+
+---
+
+## Entity Targets
+
+Commands should support typed targets where appropriate.
+
+For example:
+
+```text
+CharacterId
+BuildingId
+ResourceId
+WorldCoordinate
+```
+
+Do not pass Godot Node references into domain commands.
+
+---
+
+## Determinism
+
+Player commands must preserve deterministic simulation.
+
+Given:
+
+```text
+same world state
++
+same simulation tick
++
+same player commands
+```
+
+the resulting state must be identical.
+
+Do not use real-time UI events as simulation state.
+
+Do not perform random behaviour directly in presentation code.
+
+---
+
+## Future Command Sources
+
+The command architecture should eventually allow multiple command sources:
+
+```text
+Player
+AI
+Scenario
+Tutorial
+Scripted Event
+```
+
+All should ultimately interact with the simulation through controlled application/domain operations.
+
+The player should not receive a privileged backdoor into domain state.
+
+---
+
+## Godot Boundary
+
+Godot may handle:
+
+* mouse input;
+* click detection;
+* selection visuals;
+* context menu;
+* icons;
+* action labels;
+* animations;
+* camera movement.
+
+Godot must not own:
+
+* character needs;
+* inventory;
+* position;
+* activity;
+* production;
+* skills;
+* relationships;
+* family;
+* political status.
+
+Those belong to the simulation/domain model.
