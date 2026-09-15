@@ -65,26 +65,24 @@ Exit criteria were: same seed same world, different seeds differ, wrap continuit
 
 ## Phase 3 — First Living Characters
 
-Status: NEXT
+Status: COMPLETED
 
-Goals:
-- character identity;
-- age;
-- needs;
-- simple personality;
-- movement;
-- basic pathfinding;
-- work;
-- food;
-- sleep.
+Delivered:
+- persistent `CharacterId` / compositional `CharacterState`;
+- aging, hunger, fatigue, health/death;
+- actions Idle/Move/Eat/Sleep/Work;
+- deterministic priority AI;
+- wrap-aware 4-direction BFS;
+- 24-character land spawn;
+- debug markers + inspect HUD.
 
-Target:
-20–30 characters.
+Personality, families and professions were intentionally not implemented.
 
-Exit criteria:
-A small population can survive autonomously for many in-game days.
+Exit criteria: autonomous population for multiple simulation days, determinism tests, water/wrap/pole movement rules.
 
 ## Phase 4 — Buildings and Production
+
+Status: NEXT
 
 Goals:
 - building placement;

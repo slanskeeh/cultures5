@@ -71,4 +71,18 @@ public sealed class WorldTopology
     public int HorizontalDistance(WorldCoordinate a, WorldCoordinate b) => HorizontalDistance(a.X, b.X);
 
     public int HorizontalDistance(LogicalGridCoordinate a, LogicalGridCoordinate b) => HorizontalDistance(a.X, b.X);
+
+    /// <summary>
+    /// Signed shortest horizontal delta after wrap. Positive is east.
+    /// </summary>
+    public int SignedHorizontalDelta(int fromX, int toX)
+    {
+        var width = Configuration.Width;
+        var delta = WrapX(toX) - WrapX(fromX);
+        if (delta > width / 2)
+            delta -= width;
+        if (delta < -width / 2)
+            delta += width;
+        return delta;
+    }
 }

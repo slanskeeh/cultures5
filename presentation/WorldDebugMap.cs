@@ -1,4 +1,6 @@
 using Cultures.Application;
+using Cultures.Core.Ids;
+using Cultures.Population;
 using Cultures.World;
 using Godot;
 
@@ -59,6 +61,48 @@ public partial class WorldDebugMap : Control
                     DrawRect(rect, new Color(0.95f, 0.86f, 0.45f), filled: false, width: 2);
             }
         }
+
+        DrawCharacters(center, cursor);
+    }
+
+    public CharacterId? SelectedId { get; set; }
+
+    private void DrawCharacters(Vector2 center, LogicalGridCoordinate cursor)
+    {
+        if (Host is null)
+            return;
+
+        foreach (var character in Host.Population.All)
+        {
+            var dx = Host.World.Topology.SignedHorizontalDelta(cursor.X, character.Position.X);
+            var dy = character.Position.Y - cursor.Y;
+            if (Math.Abs(dx) > RadiusX || Math.Abs(dy) > RadiusY)
+                continue;
+
+            var pos = new Vector2(
+                center.X + dx * CellSize,
+                center.Y + dy * CellSize);
+            var radius = character.IsAlive ? 6f : 4f;
+            DrawCircle(pos, radius, ColorForAction(character));
+            if (SelectedId == character.Id)
+                DrawArc(pos, radius + 3f, 0, MathF.Tau, 16, new Color(1f, 1f, 1f));
+        }
+    }
+
+    private static Color ColorForAction(CharacterState character)
+    {
+        if (!character.IsAlive)
+            return new Color(0.25f, 0.25f, 0.25f);
+
+        return character.Activity.Kind switch
+        {
+            ActionKind.Eat => new Color(0.95f, 0.55f, 0.15f),
+            ActionKind.Sleep => new Color(0.45f, 0.65f, 0.95f),
+            ActionKind.Work => new Color(0.72f, 0.50f, 0.22f),
+            ActionKind.Move => new Color(0.95f, 0.95f, 0.95f),
+            ActionKind.Idle => new Color(0.70f, 0.70f, 0.55f),
+            _ => new Color(0.85f, 0.35f, 0.45f)
+        };
     }
 
     private static Color ColorFor(TerrainCell terrain)

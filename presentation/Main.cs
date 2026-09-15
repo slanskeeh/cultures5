@@ -1,4 +1,5 @@
 using Cultures.Application;
+using Cultures.Population;
 using Cultures.World;
 using Cultures.World.Commands;
 using Godot;
@@ -6,7 +7,8 @@ using Godot;
 namespace Cultures.Presentation;
 
 /// <summary>
-/// Application shell: clock + logical-world debug cursor. Domain state is not stored on this Node.
+/// Application shell: clock, world cursor, and character debug inspect.
+/// Domain state is not stored on this Node.
 /// </summary>
 public partial class Main : Control
 {
@@ -17,7 +19,7 @@ public partial class Main : Control
     private WorldDebugMap _map = null!;
     private double _accumulator;
     private string _lastCommand = "ready";
-    private readonly RenderProjection _projection = new(32, 16);
+    private int _selectedIndex;
 
     public override void _Ready()
     {
@@ -25,6 +27,7 @@ public partial class Main : Control
         _label = GetNode<Label>("Hud/DebugLabel");
         _map = GetNode<WorldDebugMap>("WorldDebugMap");
         _map.Host = _host;
+        SnapToSelected();
         Refresh();
     }
 
@@ -53,6 +56,12 @@ public partial class Main : Control
                 break;
             case Key.G:
                 ToggleOccupancy();
+                break;
+            case Key.Tab:
+                CycleSelection();
+                break;
+            case Key.C:
+                SnapToSelected();
                 break;
             default:
                 return;
@@ -96,26 +105,50 @@ public partial class Main : Control
             : result.Error ?? "occupancy failed";
     }
 
+    private void CycleSelection()
+    {
+        if (_host.Population.Count == 0)
+            return;
+        _selectedIndex = (_selectedIndex + 1) % _host.Population.Count;
+        _lastCommand = $"selected {_host.Population[_selectedIndex].Id}";
+    }
+
+    private void SnapToSelected()
+    {
+        if (_host.Population.Count == 0)
+            return;
+        var character = _host.Population[_selectedIndex];
+        var dx = _host.World.Topology.SignedHorizontalDelta(_host.Cursor.Position.X, character.Position.X);
+        var dy = character.Position.Y - _host.Cursor.Position.Y;
+        var result = _host.Commands.Execute(new MoveDebugCursorCommand(dx, dy));
+        _lastCommand = result.Success ? $"cursor to {character.Id}" : result.Error ?? "snap failed";
+    }
+
     private void Refresh()
     {
         var date = _host.Clock.Date;
         var cursor = _host.Cursor.Position;
         _host.World.Chunks.TryResolve(cursor.ToWorld(), out var chunk);
-        var iso = _projection.ToIsometric(cursor);
-        _host.World.Grid.TryGetOccupancy(cursor.ToWorld(), out var occupancy);
         _host.World.Grid.TryGetCell(cursor.ToWorld(), out var terrain);
         var paused = _host.Clock.IsPaused ? "PAUSED" : "RUNNING";
         var water = terrain.IsWater ? "water" : "land";
+        var selected = _host.Population.Count > 0 ? _host.Population[_selectedIndex] : null;
+        _map.SelectedId = selected?.Id;
+
+        var characterLine = selected is null
+            ? "no population"
+            : $"{selected.Id} {selected.LifeStage} age {selected.AgeYears:0.0}  {selected.Position}  " +
+              $"hunger {selected.Needs.Hunger:0.00}  fatigue {selected.Needs.Fatigue:0.00}  " +
+              $"hp {selected.Health.Current:0.00}  food {selected.Inventory.Food}  {selected.Activity.Kind}";
 
         _label.Text =
-            "CULTURES — PHASE 2  generated world\n" +
-            $"{paused}   seed {_host.WorldSeed}   gen v{_host.World.Configuration.GenerationVersion}   tick {date.Tick}\n" +
-            $"cursor {cursor}   {chunk}\n" +
-            $"{terrain.Biome}   {water}   elev {terrain.Elevation:0.00}   {terrain.Climate}\n" +
-            $"iso {iso}   occupancy {occupancy}\n" +
+            "CULTURES — PHASE 3  living characters\n" +
+            $"{paused}   seed {_host.WorldSeed}   people {_host.Population.Alive.Count()}/{_host.Population.Count}   tick {date.Tick}\n" +
+            $"cursor {cursor}   {chunk}   {terrain.Biome} {water} elev {terrain.Elevation:0.00}\n" +
+            $"{characterLine}\n" +
             $"last: {_lastCommand}\n" +
-            "Arrows move   G occupy/clear   Space pause\n" +
-            "gold outline = cursor   bright column = seam   colors = biome";
+            "Arrows cursor   Tab select   C follow   G mark   Space pause\n" +
+            "white ring = selected   orange eat   blue sleep   brown work   white move";
 
         _map.QueueRedraw();
     }

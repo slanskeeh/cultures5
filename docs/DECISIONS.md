@@ -262,6 +262,60 @@ Saves store seed, generation version, and world size metadata. They do not dupli
 Reason:
 Generated terrain is a pure function of that contract. Occupancy and future mutations will need extra save data later.
 
+## AD-030 — Compositional characters, no CharacterManager
+
+Status: Accepted
+
+`CharacterState` is composed of needs, health, inventory and activity. Separate systems age, decide and act. There is no god-object CharacterManager.
+
+Reason:
+Phase 3 must not block families/skills/politics, and must not put AI, movement and rendering in one class.
+
+## AD-031 — Extensible action instance
+
+Status: Accepted
+
+A character has one `CharacterActivity` with `ActionKind`, duration, progress and optional path. Phase 3 kinds: Idle, Move, Eat, Sleep, Work.
+
+Reason:
+Future actions can reuse the same progress/interrupt model without a DoEverything method.
+
+## AD-032 — Replaceable wrap-aware grid navigator
+
+Status: Accepted
+
+Phase 3 movement is 4-direction BFS with a small search limit, using `WorldTopology` wrap. Water is impassable. The navigator is a seam, not the final pathfinder.
+
+Reason:
+The prompt forbids world-scale pathfinding now but requires a replaceable API.
+
+## AD-033 — Temporary clustered land spawn
+
+Status: Accepted (temporary)
+
+24 characters spawn on nearby passable land around a deterministic origin. This is not a settlement.
+
+Reason:
+Need a reproducible 20–30 population without implementing Phase 6.
+
+## AD-034 — Shared cells in Phase 3
+
+Status: Accepted (temporary)
+
+Characters do not reserve occupancy. Multiple people may stand on one cell.
+
+Reason:
+Avoid coupling population to the debug occupancy overlay before buildings exist.
+
+## AD-035 — Placeholder food and work cell
+
+Status: Accepted (temporary)
+
+Food is an integer in personal inventory. Work is a shared land cell that grants food on completing Work. Sleep is allowed on any passable cell.
+
+Reason:
+Prove eat/sleep/work loops without economy, professions or housing.
+
 ## Open decisions
 
 ### OD-001 — Exact world dimensions
@@ -296,3 +350,9 @@ Not fixed. Implementation currently treats both Y extremes as cold poles.
 
 ### OD-011 — Final world-generation algorithm and biome list
 Not fixed. Phase 2 noise frequencies, sea level, polar band and biome thresholds are temporary.
+
+### OD-012 — Rest location vs housing
+Phase 3 sleeps on any passable cell. Buildings should replace this.
+
+### OD-013 — Character movement costs and occupancy
+Phase 3 ignores terrain cost and does not occupy cells. Future traffic/buildings will need a decision.

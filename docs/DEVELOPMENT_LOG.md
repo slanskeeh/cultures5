@@ -253,4 +253,85 @@ Phase 3 — First Living Characters. Do not start automatically.
 - Save version jumped 1 → 2; no migration of old envelopes.
 - Debug world is still 100×50; the generator is wrap-aware but not yet stressed at “huge planet” size.
 
+---
+
+## [2026-09-15] — Task: Phase 3 First Living Characters
+
+### 1. Task
+Implement Phase 3 from `docs/prompts/PHASE_3_PROMPT.md`: 20–30 persistent autonomous characters with needs, eat/sleep/work, logical movement, determinism, debug presentation. No families, professions, buildings, or final art.
+
+### 2. Done
+- Population domain: `CharacterState` (compositional), `PopulationRoster`, `CharacterRules` (provisional).
+- Systems: aging, needs, survival/death, decision, action, wrap-aware `GridNavigator`.
+- `PopulationSpawner` places 24 people on land with a shared placeholder work cell.
+- `SimulationHost` ticks character simulation with the clock.
+- Debug: colored action markers, Tab/C inspect, HUD id/age/needs/action.
+- AD-030..AD-035, OD-012, OD-013.
+
+### 3. Working / Verified
+- 93/93 tests pass, including previous phases.
+- Build: 0 warnings / 0 errors.
+- Headless Godot Main `--quit-after 45` exit 0.
+- Determinism: two hosts seed 1, 240 ticks, identical snapshots.
+- Survival: 2 simulated days, at least half the population alive.
+- Character movement/markers in a visible Godot window were **not** interactively inspected.
+
+### 4. Tests
+- `dotnet test tests/Cultures.Tests/Cultures.Tests.csproj` — PASS 93 passed, 0 failed, 0 skipped
+- `dotnet build Cultures.sln` — PASS, 0 warnings, 0 errors
+- Godot 4.7.2.stable.mono headless `--quit-after 45` — PASS (exit 0)
+
+### 5. Bugs found
+- Age after one year was 22.988 not ~23 because `float` accumulated `1/TicksPerYear`.
+- Water-neighbor test originally used non-wrap coordinate subtraction (caught in review, rewritten before relying on it).
+
+### 6. Bugs fixed
+- Symptom: `Age_progresses_with_simulation_time` failed InRange.
+- Cause: single-precision increment.
+- Solution: `AgeYears` is `double`; add `1.0 / TicksPerYear`.
+- Regression: that test now passes.
+
+### 7. Known limitations / TODO
+- Thresholds in `CharacterRules` are temporary (lifespan 80, hunger 0.35/day, etc.).
+- Food is a personal integer; work cell is not a building.
+- Sleep on any land cell (OD-012).
+- Characters may stack on one cell (OD-013).
+- BFS search limit 80; not world-scale pathfinding.
+- No character save/load.
+- No personality, families, skills, professions.
+- Debug view is placeholder dots.
+- Visible movement was not GUI-verified.
+
+### 8. Architecture decisions
+- AD-030 compositional characters
+- AD-031 action instance
+- AD-032 replaceable grid navigator
+- AD-033 temporary clustered spawn
+- AD-034 shared cells
+- AD-035 placeholder food/work
+
+### 9. Files changed
+- `src/Cultures.Domain/Population/**`
+- `src/Cultures.Domain/Application/SimulationHost.cs`
+- `src/Cultures.Domain/World/WorldTopology.cs` (signed wrap delta)
+- `presentation/Main.cs`, `WorldDebugMap.cs`, `Main.tscn`
+- `tests/Cultures.Tests/CharacterSimulationTests.cs`
+- `docs/DECISIONS.md`, `docs/MVP_ROADMAP.md`, both logs
+
+### 10. Current project health
+- Build: working
+- Tests: 93/93 passing
+- Runtime: headless Main boots
+- Known broken areas: none identified; character motion not GUI-verified
+
+### 11. Next step
+Phase 4 — Buildings and Production. Do not start automatically.
+
+### 12. Notes for ChatGPT
+- Review whether stacking on cells is acceptable until buildings.
+- Work-as-food-spawner must be replaced by production buildings.
+- Decision priority (hunger > fatigue > work) is a starting rule, not final AI.
+- Default debug cursor now snaps to the first character so they are on-screen at boot.
+
+
 
