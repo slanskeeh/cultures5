@@ -25,43 +25,32 @@ Delivered:
 
 ## Phase 0.5 — Documentation synchronization
 
-Status: CURRENT
+Status: COMPLETED
 
-Goals:
-- restore all canonical project documents;
-- ensure Cursor knows the full design;
-- record accepted/open architectural decisions;
-- make development log authoritative.
-
-Exit criteria:
-- all required docs exist;
-- no conflicting core architecture statements;
-- Cursor rules reference the development log;
-- repository builds.
+Canonical documents are present in `docs/` (`GAME_DESIGN_BIBLE.md`, `TECHNICAL_BIBLE.md`, `DECISIONS.md`, `MVP_ROADMAP.md`, architecture files, Cursor rules).
 
 ## Phase 1 — Logical World Foundation
 
-Goals:
-- WorldCoordinate;
-- ChunkCoordinate;
-- LogicalGridCoordinate;
-- coordinate conversion;
-- horizontal wrap;
-- north/south bounds;
-- grid occupancy;
-- terrain cell data;
-- chunk boundaries.
+Status: COMPLETED
 
-No procedural world generation yet.
+Delivered:
+- configurable `WorldConfiguration`;
+- explicit coordinate types;
+- Euclidean horizontal wrap;
+- north/south bounds without Y clamp;
+- chunk/local conversion and roundtrip;
+- in-memory `LogicalGrid`, `TerrainCell`, occupancy;
+- wrap-aware horizontal distance;
+- non-authoritative isometric/screen mapping;
+- debug cursor commands and orthographic debug map.
 
-Exit criteria:
-- deterministic coordinate conversions;
-- wrap tests;
-- grid occupancy tests;
-- debug visualization of grid;
-- player can move a debug cursor across the wrap boundary.
+No procedural world generation.
+
+Exit criteria were: deterministic conversions, wrap tests, occupancy tests, debug grid visualization, debug cursor across the wrap boundary.
 
 ## Phase 2 — Minimal World Generation
+
+Status: NEXT
 
 Goals:
 - seed;

@@ -172,6 +172,51 @@ Any change that affects core contracts must update this file and the relevant Bi
 Reason:
 AI agents need a stable source of truth.
 
+## AD-020 — Central Euclidean wrap
+
+Status: Accepted
+
+Horizontal wrap uses Euclidean modulo in `WorldTopology` only. Other systems call `WrapX` / `Resolve` and must not copy remainder formulas.
+
+Reason:
+C# `%` is remainder, not mathematical modulo, and fails for negative X. One implementation keeps wrap tests authoritative.
+
+## AD-021 — Configurable dimensions; complete chunks
+
+Status: Accepted
+
+World width/height are not hardcoded. They must be positive and divisible by chunk width/height so every chunk is a complete rectangle.
+
+Reason:
+Exact production size is still OD-001. Partial edge chunks would complicate conversion and are not needed yet.
+
+## AD-022 — Distinct coordinate types, 1:1 cells in Phase 1
+
+Status: Accepted
+
+`WorldCoordinate`, `LogicalGridCoordinate`, `ChunkCoordinate`, `ChunkLocalCoordinate`, `IsometricRenderCoordinate` and `ScreenCoordinate` are separate types. After wrap + bounds, a valid world cell maps 1:1 to a logical grid cell.
+
+Reason:
+Matches WORLD_ARCHITECTURE coordinate spaces. Sub-cell positions and final tile geometry remain OD-002.
+
+## AD-023 — Grid-authoritative occupancy
+
+Status: Accepted
+
+Occupancy lives on `TerrainCell` in `LogicalGrid`. Presentation sprites are not occupancy. `OccupantKind` is a placeholder until buildings/characters attach typed IDs.
+
+Reason:
+A visual object's position must not be the simulation source of truth.
+
+## AD-024 — ChunkCoordinate is spatial, ChunkId is persistent identity
+
+Status: Accepted
+
+`ChunkCoordinate` identifies a rectangle in the chunk lattice. Existing `ChunkId` remains a persistent entity ID and is not derived from array index in Phase 1.
+
+Reason:
+Streaming later needs both a spatial key and an identity that can survive layout changes.
+
 ## Open decisions
 
 ### OD-001 — Exact world dimensions

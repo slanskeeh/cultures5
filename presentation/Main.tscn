@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3 uid="uid://bphase0mainshell"]
+[gd_scene load_steps=3 format=3 uid="uid://bphase0mainshell"]
 
 [ext_resource type="Script" path="res://presentation/Main.cs" id="1_main"]
+[ext_resource type="Script" path="res://presentation/WorldDebugMap.cs" id="2_map"]
 
 [node name="Main" type="Control"]
 layout_mode = 3
@@ -18,17 +19,39 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.105882, 0.121569, 0.0862745, 1)
+color = Color(0.0862745, 0.0980392, 0.0705882, 1)
 
-[node name="DebugLabel" type="Label" parent="."]
+[node name="WorldDebugMap" type="Control" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("2_map")
+
+[node name="Hud" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 188.0
+grow_horizontal = 2
+color = Color(0.0705882, 0.0784314, 0.054902, 0.88)
+mouse_filter = 2
+
+[node name="DebugLabel" type="Label" parent="Hud"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 16.0
+offset_top = 10.0
+offset_right = -16.0
+offset_bottom = -8.0
+grow_horizontal = 2
+grow_vertical = 2
 theme_override_colors/font_color = Color(0.768627, 0.690196, 0.478431, 1)
-theme_override_font_sizes/font_size = 22
+theme_override_font_sizes/font_size = 16
 text = "Booting..."
-horizontal_alignment = 1
 vertical_alignment = 1

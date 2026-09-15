@@ -4,6 +4,8 @@ using Cultures.Core.Events;
 using Cultures.Core.Ids;
 using Cultures.Core.Randomness;
 using Cultures.Core.Time;
+using Cultures.World;
+using Cultures.World.Commands;
 
 namespace Cultures.Application;
 
@@ -12,7 +14,11 @@ namespace Cultures.Application;
 /// </summary>
 public sealed class SimulationHost
 {
-    public SimulationHost(ulong worldSeed, SimulationCalendar? calendar = null, ulong initialTick = 0)
+    public SimulationHost(
+        ulong worldSeed,
+        SimulationCalendar? calendar = null,
+        ulong initialTick = 0,
+        WorldConfiguration? world = null)
     {
         WorldSeed = worldSeed;
         Clock = new SimulationClock(calendar, initialTick);
@@ -20,8 +26,16 @@ public sealed class SimulationHost
         Events = new EventBus();
         Commands = new CommandProcessor();
         Ids = new EntityIdFactory();
+        World = new LogicalWorld(world ?? WorldConfiguration.DebugSample);
+        Cursor = new SimulationCursor(
+            World,
+            Events,
+            () => Clock.Tick,
+            new LogicalGridCoordinate(0, World.Configuration.Height / 2));
 
         Commands.Register(new PingCommandHandler());
+        Commands.Register(new MoveDebugCursorHandler(Cursor));
+        Commands.Register(new SetOccupancyHandler(World));
     }
 
     public ulong WorldSeed { get; }
@@ -30,6 +44,8 @@ public sealed class SimulationHost
     public EventBus Events { get; }
     public CommandProcessor Commands { get; }
     public EntityIdFactory Ids { get; }
+    public LogicalWorld World { get; }
+    public SimulationCursor Cursor { get; }
 
     public ulong Step(ulong ticks)
     {
