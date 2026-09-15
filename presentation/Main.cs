@@ -102,20 +102,20 @@ public partial class Main : Control
         var cursor = _host.Cursor.Position;
         _host.World.Chunks.TryResolve(cursor.ToWorld(), out var chunk);
         var iso = _projection.ToIsometric(cursor);
-        var screen = _projection.ToScreen(iso, new ScreenCoordinate(640, 360));
         _host.World.Grid.TryGetOccupancy(cursor.ToWorld(), out var occupancy);
+        _host.World.Grid.TryGetCell(cursor.ToWorld(), out var terrain);
         var paused = _host.Clock.IsPaused ? "PAUSED" : "RUNNING";
+        var water = terrain.IsWater ? "water" : "land";
 
         _label.Text =
-            "CULTURES — PHASE 1  logical world\n" +
-            $"{paused}   seed {_host.WorldSeed}   tick {date.Tick}\n" +
-            $"cursor  {cursor}\n" +
-            $"{chunk}\n" +
-            $"iso {iso}   screen {screen} (debug mapping only)\n" +
-            $"occupancy {occupancy}\n" +
+            "CULTURES — PHASE 2  generated world\n" +
+            $"{paused}   seed {_host.WorldSeed}   gen v{_host.World.Configuration.GenerationVersion}   tick {date.Tick}\n" +
+            $"cursor {cursor}   {chunk}\n" +
+            $"{terrain.Biome}   {water}   elev {terrain.Elevation:0.00}   {terrain.Climate}\n" +
+            $"iso {iso}   occupancy {occupancy}\n" +
             $"last: {_lastCommand}\n" +
             "Arrows move   G occupy/clear   Space pause\n" +
-            "X wraps   Y stops at poles   gold = cursor   bright column = seam";
+            "gold outline = cursor   bright column = seam   colors = biome";
 
         _map.QueueRedraw();
     }

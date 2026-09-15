@@ -26,7 +26,7 @@ public sealed class SimulationHost
         Events = new EventBus();
         Commands = new CommandProcessor();
         Ids = new EntityIdFactory();
-        World = new LogicalWorld(world ?? WorldConfiguration.DebugSample);
+        World = new LogicalWorld(world ?? WorldConfiguration.DebugSample, worldSeed);
         Cursor = new SimulationCursor(
             World,
             Events,
@@ -57,11 +57,17 @@ public sealed class SimulationHost
         return advanced;
     }
 
-    public SaveEnvelope CreateSave() => SaveEnvelopeFactory.FromClock(WorldSeed, Clock);
+    public SaveEnvelope CreateSave() => SaveEnvelopeFactory.FromHost(WorldSeed, Clock, World);
 
     public static SimulationHost FromSave(SaveEnvelope envelope, SimulationCalendar? calendar = null)
     {
         ArgumentNullException.ThrowIfNull(envelope);
-        return new SimulationHost(envelope.WorldSeed, calendar, envelope.SimulationTick);
+        var config = WorldConfiguration.Create(
+            envelope.WorldWidth > 0 ? envelope.WorldWidth : WorldConfiguration.DebugWidth,
+            envelope.WorldHeight > 0 ? envelope.WorldHeight : WorldConfiguration.DebugHeight,
+            envelope.ChunkWidth > 0 ? envelope.ChunkWidth : WorldConfiguration.DebugChunkWidth,
+            envelope.ChunkHeight > 0 ? envelope.ChunkHeight : WorldConfiguration.DebugChunkHeight,
+            envelope.GenerationVersion > 0 ? envelope.GenerationVersion : WorldGeneration.CurrentVersion);
+        return new SimulationHost(envelope.WorldSeed, calendar, envelope.SimulationTick, config);
     }
 }

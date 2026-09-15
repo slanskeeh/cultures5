@@ -21,5 +21,6 @@ public sealed class WorldConfigurationTests
         Assert.Equal(10, cfg.ChunkHeight);
         Assert.Equal(10, cfg.ChunkCountX);
         Assert.Equal(5, cfg.ChunkCountY);
+        Assert.Equal(WorldGeneration.CurrentVersion, cfg.GenerationVersion);
     }
 }

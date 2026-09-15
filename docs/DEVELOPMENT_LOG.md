@@ -175,3 +175,82 @@ Phase 2 — Minimal World Generation (deterministic seed → elevation/water/bio
 - Screen-up currently decreases Y; which pole is north is not assigned.
 - Integer isometric mapping truncates odd tile sizes (`tileWidth / 2`).
 
+---
+
+## [2026-09-15] — Task: Phase 2 Minimal World Generation
+
+### 1. Task
+Implement Phase 2 from `docs/prompts/PHASE_2_PROMPT.md`: deterministic seed-based geography (macro → elevation → water → climate → biome), chunk-on-demand access, wrap continuity, debug coloring. No civilizations, resources, or gameplay.
+
+### 2. Done
+- `WorldGenerator` with cylindrical hash value-noise; generation version mixed into the noise seed.
+- `TerrainCell` now carries elevation, water, climate, biome; occupancy remains a sparse overlay.
+- `LogicalGrid` no longer allocates Width×Height at construction; chunks generate on first sample.
+- `WorldConfiguration` gained generation version, sea level, polar band (provisional defaults).
+- Save envelope v2 stores seed + generation version + world size metadata (not the heightmap).
+- Debug map colors biomes/water/highlands; HUD shows elev/climate/biome.
+- Tests for determinism, wrap, chunks, climate, water/sea-level, polar cold, land+water presence.
+- AD-025..AD-029, OD-010, OD-011.
+
+### 3. Working / Verified
+- 78/78 domain tests pass (Phase 0 and Phase 1 included).
+- Solution/Godot C# build: 0 warnings, 0 errors.
+- Headless Godot loads Main (`--quit-after 45`, exit 0).
+- Geographic plausibility of colors in a visible window was **not** inspected; domain tests confirm land+water, colder poles, and seam continuity vs a far cut.
+
+### 4. Tests
+- Command: `dotnet test tests/Cultures.Tests/Cultures.Tests.csproj`
+- Result: PASS — 78 passed, 0 failed, 0 skipped
+- `dotnet build Cultures.sln` — PASS, 0 warnings, 0 errors
+- Godot 4.7.2.stable.mono headless `--quit-after 45` — PASS (exit 0)
+
+### 5. Bugs found
+- None in test/headless runtime. Duplicate test method names appeared during editing and were corrected before the green run.
+
+### 6. Bugs fixed
+- Symptom: two tests named `Horizontal_seam_is_more_continuous_than_a_far_cut` after a bad edit, one containing the cache-count assertions.
+- Cause: search/replace overwrote the wrong method.
+- Solution: restored `Constructor_does_not_pregenerate_the_whole_world`.
+- Regression: that test plus the seam-continuity test both pass.
+
+### 7. Known limitations / TODO
+- Noise frequencies, sea level 0.42, polar band 0.14, biome thresholds are temporary (OD-011).
+- Biome list is a placeholder (Ocean/Ice/Tundra/TemperateLand/Forest/Desert/Highland).
+- World size remains DebugSample 100×50 (OD-001).
+- Latitude: y=0 is the low-Y pole, not a declared geographic north (OD-010).
+- No rivers/lakes/soil/resources.
+- Occupancy still not in saves.
+- Debug view is orthographic placeholder art.
+- Visible Godot window / seam coloring was not interactively inspected.
+
+### 8. Architecture decisions
+- AD-025 on-demand chunk terrain
+- AD-026 cylindrical value noise, no third-party lib
+- AD-027 elevation → water → climate → biome
+- AD-028 temporary latitude mapping
+- AD-029 save generation contract, not cells
+
+### 9. Files changed
+- `src/Cultures.Domain/World/Generation/**`
+- `src/Cultures.Domain/World/TerrainCell.cs`, `LogicalGrid.cs`, `LogicalWorld.cs`, `WorldConfiguration.cs`, `WorldTopology.cs`
+- `src/Cultures.Domain/Application/SimulationHost.cs`, `Persistence/SaveEnvelope.cs`
+- `presentation/WorldDebugMap.cs`, `Main.cs`
+- `tests/Cultures.Tests/WorldGenerationTests.cs` and updated Phase 1/save tests
+- `docs/DECISIONS.md`, `docs/MVP_ROADMAP.md`, both development logs
+
+### 10. Current project health
+- Build: working
+- Tests: 78/78 passing
+- Runtime: headless Main boots
+- Known broken areas: none identified; visual geography not GUI-verified
+
+### 11. Next step
+Phase 3 — First Living Characters. Do not start automatically.
+
+### 12. Notes for ChatGPT
+- Review OD-010 (which pole is north) and OD-011 (keep or replace the noise/biome constants).
+- Dense Phase 1 grid was replaced by chunk cache; occupancy is sparse. Confirm this is the intended step toward Phase 7 streaming.
+- Save version jumped 1 → 2; no migration of old envelopes.
+- Debug world is still 100×50; the generator is wrap-aware but not yet stressed at “huge planet” size.
+
+

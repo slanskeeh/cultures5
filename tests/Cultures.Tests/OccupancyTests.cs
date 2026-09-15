@@ -4,7 +4,7 @@ namespace Cultures.Tests;
 
 public sealed class OccupancyTests
 {
-    private static LogicalGrid Grid() => new(new WorldTopology(WorldConfiguration.DebugSample));
+    private static LogicalGrid Grid() => new LogicalWorld(WorldConfiguration.DebugSample, seed: 7).Grid;
 
     [Fact]
     public void Empty_cell_is_not_occupied()

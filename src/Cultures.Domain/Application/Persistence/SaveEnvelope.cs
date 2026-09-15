@@ -1,19 +1,26 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Cultures.Core.Time;
+using Cultures.World;
 
 namespace Cultures.Application.Persistence;
 
 /// <summary>
-/// Versioned save envelope. Phase 0 stores only the foundation fields.
+/// Versioned save envelope. Static terrain is reconstructed from seed + generation contract,
+/// not stored cell-by-cell.
 /// </summary>
 public sealed record SaveEnvelope
 {
-    public const int CurrentVersion = 1;
+    public const int CurrentVersion = 2;
 
     public int SaveVersion { get; init; } = CurrentVersion;
     public ulong WorldSeed { get; init; }
     public ulong SimulationTick { get; init; }
+    public int GenerationVersion { get; init; } = WorldGeneration.CurrentVersion;
+    public int WorldWidth { get; init; }
+    public int WorldHeight { get; init; }
+    public int ChunkWidth { get; init; }
+    public int ChunkHeight { get; init; }
 }
 
 public sealed class SaveSerializer
@@ -48,14 +55,21 @@ public sealed class SaveSerializer
 
 public static class SaveEnvelopeFactory
 {
-    public static SaveEnvelope FromClock(ulong worldSeed, SimulationClock clock)
+    public static SaveEnvelope FromHost(ulong worldSeed, SimulationClock clock, LogicalWorld world)
     {
         ArgumentNullException.ThrowIfNull(clock);
+        ArgumentNullException.ThrowIfNull(world);
+        var cfg = world.Configuration;
         return new SaveEnvelope
         {
             SaveVersion = SaveEnvelope.CurrentVersion,
             WorldSeed = worldSeed,
-            SimulationTick = clock.Tick
+            SimulationTick = clock.Tick,
+            GenerationVersion = cfg.GenerationVersion,
+            WorldWidth = cfg.Width,
+            WorldHeight = cfg.Height,
+            ChunkWidth = cfg.ChunkWidth,
+            ChunkHeight = cfg.ChunkHeight
         };
     }
 }

@@ -1,5 +1,6 @@
 using Cultures.Application;
 using Cultures.Application.Persistence;
+using Cultures.World;
 
 namespace Cultures.Tests;
 
@@ -20,9 +21,12 @@ public sealed class SaveRoundtripTests
         Assert.Equal(SaveEnvelope.CurrentVersion, restored.SaveVersion);
         Assert.Equal(20260915UL, restored.WorldSeed);
         Assert.Equal(1234UL, restored.SimulationTick);
+        Assert.Equal(WorldGeneration.CurrentVersion, restored.GenerationVersion);
+        Assert.Equal(100, restored.WorldWidth);
         Assert.Contains("\"saveVersion\"", json, StringComparison.Ordinal);
         Assert.Contains("\"worldSeed\"", json, StringComparison.Ordinal);
         Assert.Contains("\"simulationTick\"", json, StringComparison.Ordinal);
+        Assert.Contains("\"generationVersion\"", json, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -38,5 +42,8 @@ public sealed class SaveRoundtripTests
 
         resumed.Step(2);
         Assert.Equal(42UL, resumed.Clock.Tick);
+        Assert.Equal(
+            original.World.Grid.GetCell(new LogicalGridCoordinate(12, 8)).Generated,
+            resumed.World.Grid.GetCell(new LogicalGridCoordinate(12, 8)).Generated);
     }
 }

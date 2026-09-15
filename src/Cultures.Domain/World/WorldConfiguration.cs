@@ -20,12 +20,22 @@ public sealed class WorldConfiguration : IEquatable<WorldConfiguration>
         DebugChunkWidth,
         DebugChunkHeight);
 
-    private WorldConfiguration(int width, int height, int chunkWidth, int chunkHeight)
+    private WorldConfiguration(
+        int width,
+        int height,
+        int chunkWidth,
+        int chunkHeight,
+        int generationVersion,
+        float seaLevel,
+        float polarBand)
     {
         Width = width;
         Height = height;
         ChunkWidth = chunkWidth;
         ChunkHeight = chunkHeight;
+        GenerationVersion = generationVersion;
+        SeaLevel = seaLevel;
+        PolarBand = polarBand;
     }
 
     public int Width { get; }
@@ -34,8 +44,18 @@ public sealed class WorldConfiguration : IEquatable<WorldConfiguration>
     public int ChunkHeight { get; }
     public int ChunkCountX => Width / ChunkWidth;
     public int ChunkCountY => Height / ChunkHeight;
+    public int GenerationVersion { get; }
+    public float SeaLevel { get; }
+    public float PolarBand { get; }
 
-    public static WorldConfiguration Create(int width, int height, int chunkWidth, int chunkHeight)
+    public static WorldConfiguration Create(
+        int width,
+        int height,
+        int chunkWidth,
+        int chunkHeight,
+        int generationVersion = WorldGeneration.CurrentVersion,
+        float seaLevel = WorldGeneration.DefaultSeaLevel,
+        float polarBand = WorldGeneration.DefaultPolarBand)
     {
         if (width <= 0)
             throw new ArgumentOutOfRangeException(nameof(width), "World width must be positive.");
@@ -49,18 +69,32 @@ public sealed class WorldConfiguration : IEquatable<WorldConfiguration>
             throw new ArgumentException("World width must be divisible by chunk width.", nameof(chunkWidth));
         if (height % chunkHeight != 0)
             throw new ArgumentException("World height must be divisible by chunk height.", nameof(chunkHeight));
+        if (generationVersion <= 0)
+            throw new ArgumentOutOfRangeException(nameof(generationVersion), "Generation version must be positive.");
+        if (seaLevel is < 0f or > 1f)
+            throw new ArgumentOutOfRangeException(nameof(seaLevel), "Sea level must be in [0, 1].");
+        if (polarBand is < 0f or > 0.5f)
+            throw new ArgumentOutOfRangeException(nameof(polarBand), "Polar band must be in [0, 0.5].");
 
-        return new WorldConfiguration(width, height, chunkWidth, chunkHeight);
+        return new WorldConfiguration(width, height, chunkWidth, chunkHeight, generationVersion, seaLevel, polarBand);
     }
+
+    public WorldConfiguration WithGenerationVersion(int generationVersion) =>
+        Create(Width, Height, ChunkWidth, ChunkHeight, generationVersion, SeaLevel, PolarBand);
 
     public bool Equals(WorldConfiguration? other) =>
         other is not null
         && Width == other.Width
         && Height == other.Height
         && ChunkWidth == other.ChunkWidth
-        && ChunkHeight == other.ChunkHeight;
+        && ChunkHeight == other.ChunkHeight
+        && GenerationVersion == other.GenerationVersion
+        && SeaLevel.Equals(other.SeaLevel)
+        && PolarBand.Equals(other.PolarBand);
 
     public override bool Equals(object? obj) => Equals(obj as WorldConfiguration);
-    public override int GetHashCode() => HashCode.Combine(Width, Height, ChunkWidth, ChunkHeight);
-    public override string ToString() => $"World {Width}x{Height}, chunk {ChunkWidth}x{ChunkHeight}";
+    public override int GetHashCode() =>
+        HashCode.Combine(Width, Height, ChunkWidth, ChunkHeight, GenerationVersion, SeaLevel, PolarBand);
+    public override string ToString() =>
+        $"World {Width}x{Height}, chunk {ChunkWidth}x{ChunkHeight}, gen v{GenerationVersion}";
 }

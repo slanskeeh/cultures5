@@ -50,25 +50,22 @@ Exit criteria were: deterministic conversions, wrap tests, occupancy tests, debu
 
 ## Phase 2 — Minimal World Generation
 
-Status: NEXT
+Status: COMPLETED
 
-Goals:
-- seed;
-- macro geography;
-- basic elevation;
-- water;
-- climate;
-- biome;
-- deterministic generation;
-- chunk generation.
+Delivered:
+- seed + generation version contract;
+- cylindrical wrap-aware macro geography and elevation;
+- sea-level water/land;
+- latitude/elevation climate;
+- placeholder biome classifier;
+- on-demand deterministic chunk cache;
+- debug biome coloring.
 
-Exit criteria:
-- same seed produces same world;
-- different seeds produce meaningfully different worlds;
-- generated world wraps correctly;
-- chunks can be loaded/unloaded.
+Exit criteria were: same seed same world, different seeds differ, wrap continuity, chunk load without full-planet allocation.
 
 ## Phase 3 — First Living Characters
+
+Status: NEXT
 
 Goals:
 - character identity;

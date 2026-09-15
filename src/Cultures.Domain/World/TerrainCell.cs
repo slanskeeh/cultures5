@@ -20,21 +20,68 @@ public readonly record struct Occupancy(OccupantKind Kind)
 }
 
 /// <summary>
-/// Minimal terrain cell. Biomes, resources and elevation are intentionally absent.
+/// Climate is independent of biome. Values are 0..1 and provisional.
+/// </summary>
+public readonly record struct ClimateSample(float Temperature, float Moisture)
+{
+    public override string ToString() => $"Climate(t={Temperature:0.00}, m={Moisture:0.00})";
+}
+
+/// <summary>
+/// Placeholder biomes for classification, not the final content list.
+/// </summary>
+public enum BiomeId : byte
+{
+    Ocean = 0,
+    Ice = 1,
+    Tundra = 2,
+    TemperateLand = 3,
+    Forest = 4,
+    Desert = 5,
+    Highland = 6
+}
+
+/// <summary>
+/// Coarse land/water kind derived from elevation vs sea level.
 /// </summary>
 public enum TerrainKind : byte
 {
-    Unspecified = 0
+    Land = 0,
+    Water = 1
 }
 
-public readonly record struct TerrainCell(TerrainKind Kind, bool Passable, Occupancy Occupancy)
+/// <summary>
+/// Static generated fields for one cell. Occupancy is applied by the logical grid overlay.
+/// </summary>
+public readonly record struct GeneratedTerrain(
+    float Elevation,
+    bool IsWater,
+    ClimateSample Climate,
+    BiomeId Biome)
 {
-    public static TerrainCell Empty { get; } = new(TerrainKind.Unspecified, Passable: true, Occupancy.Empty);
+    public TerrainKind Kind => IsWater ? TerrainKind.Water : TerrainKind.Land;
+    public bool Passable => !IsWater;
 
+    public TerrainCell WithOccupancy(Occupancy occupancy) => new(this, occupancy);
+}
+
+/// <summary>
+/// Authoritative terrain cell: generated geography plus occupancy overlay.
+/// </summary>
+public readonly record struct TerrainCell(GeneratedTerrain Generated, Occupancy Occupancy)
+{
+    public static TerrainCell Unoccupied(GeneratedTerrain generated) => new(generated, Occupancy.Empty);
+
+    public float Elevation => Generated.Elevation;
+    public bool IsWater => Generated.IsWater;
+    public ClimateSample Climate => Generated.Climate;
+    public BiomeId Biome => Generated.Biome;
+    public TerrainKind Kind => Generated.Kind;
+    public bool Passable => Generated.Passable;
     public bool IsOccupied => Occupancy.IsOccupied;
 
     public TerrainCell WithOccupancy(Occupancy occupancy) => this with { Occupancy = occupancy };
 
     public override string ToString() =>
-        $"Terrain({Kind}, passable={Passable}, occupancy={Occupancy})";
+        $"Terrain(e={Elevation:0.00}, water={IsWater}, {Biome}, {Climate}, occ={Occupancy})";
 }

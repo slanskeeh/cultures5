@@ -217,6 +217,51 @@ Status: Accepted
 Reason:
 Streaming later needs both a spatial key and an identity that can survive layout changes.
 
+## AD-025 — On-demand chunk terrain
+
+Status: Accepted
+
+Static terrain is sampled per cell and cached per chunk. The constructor does not allocate the whole planet.
+
+Reason:
+Phase 2 forbids generating the final planet as one array. Occupancy is a sparse overlay on generated cells.
+
+## AD-026 — Built-in cylindrical value noise
+
+Status: Accepted
+
+Phase 2 uses a small hash-based value-noise implementation sampled on a cylinder so X is periodic. No third-party noise library is adopted as a project standard.
+
+Reason:
+The prompt forbids prematurely committing to a generator package. The algorithm is provisional (OD-011).
+
+## AD-027 — Causal geography: elevation → water → climate → biome
+
+Status: Accepted
+
+Water is elevation compared to configurable sea level. Climate is computed from latitude and elevation (plus a moisture field). Biome is a classifier over those facts, not the source of climate.
+
+Reason:
+Matches WORLD_ARCHITECTURE causality and keeps later soil/resource layers attachable.
+
+## AD-028 — Temporary latitude mapping
+
+Status: Accepted (temporary)
+
+Latitude 0 is y = 0 and latitude 1 is y = Height - 1. Both ends are polar. This does **not** decide which pole is geographic north.
+
+Reason:
+The design requires polar bands now; the north/south label is still an open decision.
+
+## AD-029 — Reconstruct static terrain from generation contract
+
+Status: Accepted
+
+Saves store seed, generation version, and world size metadata. They do not duplicate the generated heightmap.
+
+Reason:
+Generated terrain is a pure function of that contract. Occupancy and future mutations will need extra save data later.
+
 ## Open decisions
 
 ### OD-001 — Exact world dimensions
@@ -245,3 +290,9 @@ Not fixed.
 
 ### OD-009 — Military model
 Not fixed.
+
+### OD-010 — Which Y pole is geographic north
+Not fixed. Implementation currently treats both Y extremes as cold poles.
+
+### OD-011 — Final world-generation algorithm and biome list
+Not fixed. Phase 2 noise frequencies, sea level, polar band and biome thresholds are temporary.

@@ -1,31 +1,31 @@
 namespace Cultures.World;
 
 /// <summary>
-/// Authoritative in-memory logical grid. Independent of Godot TileMap.
-/// Phase 1 stores a dense array; chunk streaming is deferred.
+/// Occupancy overlay on generated terrain. Does not allocate the whole planet.
+/// Generated geography comes from <see cref="WorldGenerator"/> on demand.
 /// </summary>
 public sealed class LogicalGrid
 {
-    private readonly TerrainCell[,] _cells;
+    private readonly Dictionary<(int X, int Y), Occupancy> _occupancy = new();
 
-    public LogicalGrid(WorldTopology topology)
+    public LogicalGrid(WorldTopology topology, WorldGenerator generator)
     {
         Topology = topology ?? throw new ArgumentNullException(nameof(topology));
-        var cfg = topology.Configuration;
-        _cells = new TerrainCell[cfg.Width, cfg.Height];
-        for (var x = 0; x < cfg.Width; x++)
-        {
-            for (var y = 0; y < cfg.Height; y++)
-                _cells[x, y] = TerrainCell.Empty;
-        }
+        Generator = generator ?? throw new ArgumentNullException(nameof(generator));
     }
 
     public WorldTopology Topology { get; }
+    public WorldGenerator Generator { get; }
     public WorldConfiguration Configuration => Topology.Configuration;
 
     public bool IsInside(WorldCoordinate position) => Topology.IsInside(position);
 
-    public TerrainCell GetCell(LogicalGridCoordinate cell) => _cells[cell.X, cell.Y];
+    public TerrainCell GetCell(LogicalGridCoordinate cell)
+    {
+        var generated = Generator.SampleFromChunk(cell);
+        _occupancy.TryGetValue((cell.X, cell.Y), out var occupancy);
+        return generated.WithOccupancy(occupancy);
+    }
 
     public bool TryGetCell(WorldCoordinate position, out TerrainCell cell)
     {
@@ -35,18 +35,7 @@ public sealed class LogicalGrid
             return false;
         }
 
-        cell = _cells[grid.X, grid.Y];
-        return true;
-    }
-
-    public void SetCell(LogicalGridCoordinate cell, TerrainCell value) => _cells[cell.X, cell.Y] = value;
-
-    public bool TrySetCell(WorldCoordinate position, TerrainCell value)
-    {
-        if (!Topology.TryGetCell(position, out var grid))
-            return false;
-
-        _cells[grid.X, grid.Y] = value;
+        cell = GetCell(grid);
         return true;
     }
 
@@ -64,13 +53,14 @@ public sealed class LogicalGrid
 
     public bool TrySetOccupancy(WorldCoordinate position, Occupancy occupancy)
     {
-        if (!TryGetCell(position, out var cell))
-            return false;
-
         if (!Topology.TryGetCell(position, out var grid))
             return false;
 
-        _cells[grid.X, grid.Y] = cell.WithOccupancy(occupancy);
+        if (occupancy.IsOccupied)
+            _occupancy[(grid.X, grid.Y)] = occupancy;
+        else
+            _occupancy.Remove((grid.X, grid.Y));
+
         return true;
     }
 

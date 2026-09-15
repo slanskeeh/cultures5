@@ -43,6 +43,21 @@ public sealed class WorldTopology
         Resolve(coordinate).TryGetCell(out cell);
 
     /// <summary>
+    /// Temporary latitude mapping: 0 at y = 0, 1 at y = Height - 1.
+    /// Poles are both ends; which end is geographic north is not a final design decision.
+    /// </summary>
+    public float Latitude01(int y)
+    {
+        if (!IsInsideY(y))
+            throw new ArgumentOutOfRangeException(nameof(y), "Latitude is only defined inside the world.");
+
+        if (Configuration.Height <= 1)
+            return 0.5f;
+
+        return y / (float)(Configuration.Height - 1);
+    }
+
+    /// <summary>
     /// Shortest horizontal distance on the wrapped X axis, in cells.
     /// </summary>
     public int HorizontalDistance(int x1, int x2)
