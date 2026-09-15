@@ -117,21 +117,28 @@ Professions, personality, marriage, and family history signs were intentionally 
 
 ## Phase 6 — Emergent Settlements
 
-Status: NEXT
+Status: COMPLETED
 
-Goals:
-- population clustering;
-- settlement formation;
-- growth/shrinkage;
-- settlement leadership;
-- basic happiness/health;
-- taxes;
-- food storage.
+Delivered:
+- wrap-aware chunk clustering of people and buildings;
+- emergent `SettlementId` with derived core;
+- lifecycle Emerging → Established → Declining → Abandoned with hysteresis;
+- mutable derived membership on characters;
+- building association without deleting buildings on abandon;
+- derived settlement statistics (population, shelter, stored food, workers);
+- `CultureId.Neutral` and `HouseholdId.None` seams;
+- newborns at age 0 as Infant, with caregiver links;
+- debug inspect (M/U/E) and `EvaluateSettlementsCommand`.
+
+Intentionally not implemented (later phases):
+- leadership gameplay, happiness, taxes, trade, diplomacy, factions, migration.
 
 Exit criteria:
 Settlements emerge without explicit player placement.
 
 ## Phase 7 — Large World and Simulation LOD
+
+Status: NEXT
 
 Goals:
 - chunk streaming;

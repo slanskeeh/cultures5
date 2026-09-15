@@ -166,7 +166,9 @@ Phase 5 stores integer skill experience on the character. Work and teaching add 
 
 ## 9. Families
 
-Phase 5 represents genealogy as parent/child `CharacterId` links and queries (siblings, grandparents). A full `FamilyState` (name, reputation, household) is future work. `FamilyId` is reserved and unused.
+Phase 5 represents genealogy as parent/child `CharacterId` links and queries (siblings, grandparents). A full `FamilyState` (name, reputation, household) is future work. `FamilyId` is reserved and unused. Phase 6 adds `HouseholdId.None` on characters and caregiver links (initially parents). Family membership is independent of settlement membership.
+
+Birth now starts at age 0 as `Infant`. Life stages: Infant → Child → Adolescent → Adult → Elder → Dead. Infants cannot work, teach, or navigate independently.
 
 ## 10. Buildings
 
@@ -208,21 +210,32 @@ Phase 4 implements this as `ProductionResolver` + `IEnvironmentProductionModifie
 
 ## 12. Settlements
 
-Settlement emergence evaluates:
-- population density;
-- social cohesion;
-- shared culture;
-- infrastructure;
-- economic activity;
-- persistence over time.
+Phase 6 implements settlements as persistent groupings that emerge from living characters plus active infrastructure.
 
-A settlement may:
+Detection:
+- occupied chunks (people and active buildings);
+- 4-neighbour connected components with horizontal chunk wrap;
+- qualification: enough people, enough buildings, shelter and storage;
+- periodic evaluation (not every tick, not O(N²) pairwise).
+
+A settlement has:
+- `SettlementId` (not coordinates);
+- derived wrap-aware core;
+- lifecycle (Emerging / Established / Declining / Abandoned);
+- derived membership and statistics;
+- optional future `CultureId` / `Leader` seams.
+
+A settlement may later:
 - grow;
 - shrink;
 - split;
 - merge;
 - migrate;
 - disappear.
+
+Split, merge, migration, politics, taxation, and trade are not implemented in Phase 6.
+
+Abandoned identity is kept. Re-inhabitation currently creates a new `SettlementId` (OD-018).
 
 ## 13. Politics
 

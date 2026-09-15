@@ -2,6 +2,7 @@ using Cultures.Application;
 using Cultures.Buildings;
 using Cultures.Core.Ids;
 using Cultures.Population;
+using Cultures.Settlement;
 using Cultures.World;
 using Godot;
 
@@ -64,11 +65,48 @@ public partial class WorldDebugMap : Control
         }
 
         DrawBuildings(center, cursor);
+        DrawSettlements(center, cursor);
         DrawCharacters(center, cursor);
     }
 
     public CharacterId? SelectedId { get; set; }
     public BuildingId? SelectedBuildingId { get; set; }
+    public SettlementId? SelectedSettlementId { get; set; }
+
+    private void DrawSettlements(Vector2 center, LogicalGridCoordinate cursor)
+    {
+        if (Host is null)
+            return;
+
+        foreach (var settlement in Host.Settlements.All)
+        {
+            var dx = Host.World.Topology.SignedHorizontalDelta(cursor.X, settlement.Core.X);
+            var dy = settlement.Core.Y - cursor.Y;
+            if (Math.Abs(dx) > RadiusX || Math.Abs(dy) > RadiusY)
+                continue;
+
+            var pos = new Vector2(
+                center.X + dx * CellSize,
+                center.Y + dy * CellSize);
+            var color = ColorForSettlement(settlement.Id, settlement.Lifecycle);
+            DrawArc(pos, CellSize * 0.7f, 0, MathF.Tau, 20, color, 2);
+            if (SelectedSettlementId == settlement.Id)
+                DrawArc(pos, CellSize * 0.95f, 0, MathF.Tau, 24, new Color(1f, 1f, 0.55f), 2);
+        }
+    }
+
+    private static Color ColorForSettlement(SettlementId id, SettlementLifecycle lifecycle)
+    {
+        var hue = (id.Value % 8) / 8f;
+        var color = Color.FromHsv(hue, 0.55f, 0.95f);
+        return lifecycle switch
+        {
+            SettlementLifecycle.Emerging => color.Lightened(0.15f),
+            SettlementLifecycle.Declining => color.Darkened(0.25f),
+            SettlementLifecycle.Abandoned => new Color(0.35f, 0.35f, 0.35f),
+            _ => color
+        };
+    }
 
     private void DrawBuildings(Vector2 center, LogicalGridCoordinate cursor)
     {
@@ -150,8 +188,12 @@ public partial class WorldDebugMap : Control
             var pos = new Vector2(
                 center.X + dx * CellSize,
                 center.Y + dy * CellSize);
-            var radius = character.IsAlive ? 6f : 4f;
+            var radius = !character.IsAlive
+                ? 4f
+                : character.LifeStage == CharacterLifeStage.Infant ? 4.5f : 6f;
             DrawCircle(pos, radius, ColorForAction(character));
+            if (character.Settlement.IsAssigned)
+                DrawArc(pos, radius + 5f, 0, MathF.Tau, 12, ColorForSettlement(character.Settlement, SettlementLifecycle.Established));
             if (SelectedId == character.Id)
                 DrawArc(pos, radius + 3f, 0, MathF.Tau, 16, new Color(1f, 1f, 1f));
         }

@@ -68,8 +68,9 @@ public sealed class BirthAndLifeStageTests
         Assert.NotEqual(a.Population[0].Id, childA.Id);
         Assert.Equal(childA.Id, childB.Id);
         Assert.Equal(SkillRules.NewbornAgeYears, childA.AgeYears);
-        Assert.Equal(CharacterLifeStage.Child, childA.LifeStage);
+        Assert.Equal(CharacterLifeStage.Infant, childA.LifeStage);
         Assert.Equal(childA.FamilyLinks.Parents, childB.FamilyLinks.Parents);
+        Assert.Equal(childA.FamilyLinks.Caregivers, childA.FamilyLinks.Parents);
         Assert.Equal(childA.Skills.GetLevel(SkillType.Farming), childB.Skills.GetLevel(SkillType.Farming));
     }
 
@@ -87,10 +88,64 @@ public sealed class BirthAndLifeStageTests
     {
         var host = new SimulationHost(1, populationCount: 2);
         Assert.Equal(CharacterLifeStage.Adult, CharacterAgingSystem.StageFor(22));
+        Assert.Equal(CharacterLifeStage.Infant, CharacterAgingSystem.StageFor(0));
+        Assert.Equal(CharacterLifeStage.Infant, CharacterAgingSystem.StageFor(2));
         Assert.Equal(CharacterLifeStage.Child, CharacterAgingSystem.StageFor(8));
+        Assert.Equal(CharacterLifeStage.Adolescent, CharacterAgingSystem.StageFor(14));
+        Assert.Equal(CharacterLifeStage.Elder, CharacterAgingSystem.StageFor(61));
         Assert.True(host.Creation.TryCreateChild(host.Population[0].Id, host.Population[1].Id, out var child, out _));
-        Assert.Null(host.Production.FindFreeWorkplace(child!));
+        Assert.Equal(0, child!.AgeYears);
+        Assert.Equal(CharacterLifeStage.Infant, child.LifeStage);
+        Assert.False(SkillRules.CanWork(child));
+        Assert.Null(host.Production.FindFreeWorkplace(child));
         Assert.NotNull(host.Production.FindFreeWorkplace(host.Population[0]));
+    }
+
+    [Fact]
+    public void Infant_does_not_work_or_navigate_independently()
+    {
+        var world = new LogicalWorld(WorldConfiguration.DebugSample, 1);
+        var decisions = new CharacterDecisionSystem(
+            new GridNavigator(world),
+            TestProduction.ForWorld(world),
+            TestProduction.Teaching(world));
+        var infant = new CharacterState(new CharacterId(1), new LogicalGridCoordinate(0, 0), 1)
+        {
+            AgeYears = 0,
+            LifeStage = CharacterLifeStage.Infant
+        };
+        infant.Needs.Hunger = 0.9f;
+        Assert.Equal(ActionKind.Idle, decisions.ChooseKind(infant));
+        Assert.True(infant.Inventory.TryAdd(Cultures.Economy.ResourceType.Food, 1));
+        Assert.Equal(ActionKind.Eat, decisions.ChooseKind(infant));
+        Assert.False(SkillRules.CanLearn(infant));
+        Assert.False(SkillRules.CanTeach(infant));
+    }
+
+    [Fact]
+    public void Life_stage_transitions_are_age_driven()
+    {
+        var aging = new CharacterAgingSystem(SimulationCalendar.Default);
+        var character = new CharacterState(new CharacterId(1), new LogicalGridCoordinate(0, 0), 1)
+        {
+            AgeYears = 0,
+            LifeStage = CharacterLifeStage.Infant
+        };
+        character.AgeYears = CharacterRules.InfantUntilYears;
+        aging.ApplyTick(character);
+        Assert.Equal(CharacterLifeStage.Child, character.LifeStage);
+
+        character.AgeYears = CharacterRules.ChildUntilYears;
+        aging.ApplyTick(character);
+        Assert.Equal(CharacterLifeStage.Adolescent, character.LifeStage);
+
+        character.AgeYears = CharacterRules.AdolescentUntilYears;
+        aging.ApplyTick(character);
+        Assert.Equal(CharacterLifeStage.Adult, character.LifeStage);
+
+        character.AgeYears = CharacterRules.ElderFromYears;
+        aging.ApplyTick(character);
+        Assert.Equal(CharacterLifeStage.Elder, character.LifeStage);
     }
 }
 
@@ -245,6 +300,8 @@ public sealed class TeachingTests
         teacher = host.Population[0];
         Assert.True(host.Creation.TryCreateChild(teacher.Id, host.Population[1].Id, out var child, out _));
         student = child!;
+        student.AgeYears = 8;
+        student.LifeStage = CharacterLifeStage.Child;
         teacher.Skills.SetLevel(SkillType.Farming, 40);
         student.Skills.SetLevel(SkillType.Farming, 2);
         student.Position = teacher.Position;

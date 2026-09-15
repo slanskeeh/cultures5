@@ -54,6 +54,7 @@ public sealed class BuildingState
         AccessCell = accessCell;
         Inventory = new Inventory(definition.StorageCapacity == 0 ? 16 : definition.StorageCapacity);
         Lifecycle = BuildingLifecycle.Planned;
+        AssociatedSettlement = SettlementId.None;
     }
 
     public BuildingId Id { get; }
@@ -64,6 +65,7 @@ public sealed class BuildingState
     public LogicalGridCoordinate AccessCell { get; }
     public Inventory Inventory { get; }
     public BuildingLifecycle Lifecycle { get; set; }
+    public SettlementId AssociatedSettlement { get; set; }
     public BuildingProductionState Production { get; } = new();
 
     public BuildingTypeId TypeId => Definition.TypeId;
@@ -78,7 +80,8 @@ public sealed class BuildingState
         Inventory.GetQuantity(ResourceType.Wood),
         Inventory.GetQuantity(ResourceType.Stone),
         Production.ProgressTicks,
-        Workplaces.Count > 0 ? Workplaces[0].Worker.Value : 0);
+        Workplaces.Count > 0 ? Workplaces[0].Worker.Value : 0,
+        AssociatedSettlement.Value);
 }
 
 public readonly record struct BuildingSnapshot(
@@ -90,4 +93,5 @@ public readonly record struct BuildingSnapshot(
     int Wood,
     int Stone,
     int ProductionProgress,
-    ulong FirstWorker);
+    ulong FirstWorker,
+    ulong Settlement);

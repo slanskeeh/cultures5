@@ -61,6 +61,9 @@ public sealed class EntityIdTests
     public void None_is_unassigned()
     {
         Assert.False(CharacterId.None.IsAssigned);
+        Assert.False(HouseholdId.None.IsAssigned);
         Assert.True(new SettlementId(1).IsAssigned);
+        Assert.True(CultureId.Neutral.IsAssigned);
+        Assert.NotEqual(CultureId.None, CultureId.Neutral);
     }
 }

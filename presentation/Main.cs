@@ -2,6 +2,7 @@ using Cultures.Application;
 using Cultures.Buildings;
 using Cultures.Economy;
 using Cultures.Population;
+using Cultures.Settlement;
 using Cultures.World;
 using Cultures.World.Commands;
 using Godot;
@@ -23,6 +24,7 @@ public partial class Main : Control
     private string _lastCommand = "ready";
     private int _selectedIndex;
     private int _selectedBuildingIndex;
+    private int _selectedSettlementIndex;
 
     public override void _Ready()
     {
@@ -80,6 +82,15 @@ public partial class Main : Control
                 break;
             case Key.K:
                 DebugGrantSkill();
+                break;
+            case Key.M:
+                CycleSettlement();
+                break;
+            case Key.U:
+                SnapToSettlement();
+                break;
+            case Key.E:
+                DebugEvaluateSettlements();
                 break;
             default:
                 return;
@@ -189,6 +200,33 @@ public partial class Main : Control
             : result.Error ?? "skill failed";
     }
 
+    private void CycleSettlement()
+    {
+        if (_host.Settlements.Count == 0)
+            return;
+        _selectedSettlementIndex = (_selectedSettlementIndex + 1) % _host.Settlements.Count;
+        _lastCommand = $"selected {_host.Settlements[_selectedSettlementIndex].Id}";
+    }
+
+    private void SnapToSettlement()
+    {
+        if (_host.Settlements.Count == 0)
+            return;
+        var settlement = _host.Settlements[_selectedSettlementIndex];
+        var dx = _host.World.Topology.SignedHorizontalDelta(_host.Cursor.Position.X, settlement.Core.X);
+        var dy = settlement.Core.Y - _host.Cursor.Position.Y;
+        var result = _host.Commands.Execute(new MoveDebugCursorCommand(dx, dy));
+        _lastCommand = result.Success ? $"cursor to {settlement.Id} core" : result.Error ?? "snap failed";
+    }
+
+    private void DebugEvaluateSettlements()
+    {
+        var result = _host.Commands.Execute(new EvaluateSettlementsCommand());
+        _lastCommand = result.Success
+            ? $"evaluated settlements ({_host.Settlements.Count})"
+            : result.Error ?? "evaluate failed";
+    }
+
     private void SnapToBuilding()
     {
         if (_host.Buildings.Count == 0)
@@ -210,10 +248,14 @@ public partial class Main : Control
         var water = terrain.IsWater ? "water" : "land";
         var selected = _host.Population.Count > 0 ? _host.Population[_selectedIndex] : null;
         var selectedBuilding = _host.Buildings.Count > 0 ? _host.Buildings[_selectedBuildingIndex] : null;
+        var selectedSettlement = _host.Settlements.Count > 0
+            ? _host.Settlements[_selectedSettlementIndex % _host.Settlements.Count]
+            : null;
         var cursorBuilding = _host.Buildings.FindAt(cursor);
         var inspectBuilding = cursorBuilding ?? selectedBuilding;
         _map.SelectedId = selected?.Id;
         _map.SelectedBuildingId = inspectBuilding?.Id;
+        _map.SelectedSettlementId = selectedSettlement?.Id;
 
         var workplace = selected is { AssignedWorkplace.IsAssigned: true }
             ? selected.AssignedWorkplace.ToString()
@@ -222,10 +264,12 @@ public partial class Main : Control
             ? "no population"
             : $"{selected.Id} {selected.LifeStage} age {selected.AgeYears:0.0}  {selected.Position}  " +
               $"hunger {selected.Needs.Hunger:0.00}  fatigue {selected.Needs.Fatigue:0.00}  " +
-              $"food {selected.Inventory.GetQuantity(ResourceType.Food)}  {selected.Activity.Kind}  work {workplace}";
+              $"food {selected.Inventory.GetQuantity(ResourceType.Food)}  {selected.Activity.Kind}  " +
+              $"work {workplace}  {selected.Settlement}";
         var familyLine = selected is null
             ? ""
             : $"parents {string.Join(",", selected.FamilyLinks.Parents.Select(id => id.Value.ToString()))}  " +
+              $"care {string.Join(",", selected.FamilyLinks.Caregivers.Select(id => id.Value.ToString()))}  " +
               $"children {string.Join(",", selected.FamilyLinks.Children.Select(id => id.Value.ToString()))}  " +
               $"partner {selected.Activity.PartnerId}  skill {selected.Activity.Skill?.ToString() ?? "-"}";
         var skillLine = selected is null
@@ -242,18 +286,30 @@ public partial class Main : Control
               $"wood {inspectBuilding.Inventory.GetQuantity(ResourceType.Wood)}  " +
               $"recipe {inspectBuilding.Production.CurrentRecipe?.Value ?? inspectBuilding.Definition.Recipe?.Value ?? "-"}  " +
               $"prod {inspectBuilding.Production.ProgressTicks}/{inspectBuilding.Production.DurationTicks}  " +
-              $"workers {string.Join(",", inspectBuilding.Workplaces.Select(w => w.Worker.IsAssigned ? w.Worker.Value.ToString() : "-"))}";
+              $"workers {string.Join(",", inspectBuilding.Workplaces.Select(w => w.Worker.IsAssigned ? w.Worker.Value.ToString() : "-"))}  " +
+              $"{inspectBuilding.AssociatedSettlement}";
+
+        var stats = selectedSettlement?.Statistics;
+        var settlementLine = selectedSettlement is null
+            ? "no settlement"
+            : $"{selectedSettlement.Id} {selectedSettlement.Lifecycle} {selectedSettlement.NameKey}  " +
+              $"core {selectedSettlement.Core}  pop {stats!.Population}  " +
+              $"inf {stats.Infants} ch {stats.Children} adol {stats.Adolescents} ad {stats.Adults} el {stats.Elders}  " +
+              $"bld {stats.ActiveBuildings} sh {stats.Shelters} st {stats.StorageBuildings}  " +
+              $"food {stats.FoodStored} work {stats.Workers}/{stats.UnemployedAdults} prod {stats.EstimatedFoodProduction}";
 
         _label.Text =
-            "CULTURES — PHASE 5  families and skills\n" +
-            $"{paused}   seed {_host.WorldSeed}   people {_host.Population.Alive.Count()}/{_host.Population.Count}   buildings {_host.Buildings.Count}   tick {date.Tick}\n" +
+            "CULTURES — PHASE 6  emergent settlements\n" +
+            $"{paused}   seed {_host.WorldSeed}   people {_host.Population.Alive.Count()}/{_host.Population.Count}   " +
+            $"buildings {_host.Buildings.Count}   settlements {_host.Settlements.Count}   tick {date.Tick}\n" +
             $"cursor {cursor}   {chunk}   {terrain.Biome} {water} elev {terrain.Elevation:0.00}\n" +
             $"{characterLine}\n" +
             $"{familyLine}\n" +
             $"{skillLine}\n" +
             $"{buildingLine}\n" +
+            $"{settlementLine}\n" +
             $"last: {_lastCommand}\n" +
-            "Arrows cursor   Tab person   C follow   B/V building   N child   T teach   K skill   G mark   Space pause\n" +
+            "Arrows cursor   Tab person   C follow   B/V building   M/U settlement   E detect   N child   T teach   K skill   G mark   Space pause\n" +
             "F farm  S storage  H house  W workshop";
 
         _map.QueueRedraw();

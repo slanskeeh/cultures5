@@ -9,15 +9,26 @@ public sealed class FamilyLinks
 {
     private readonly List<CharacterId> _parents = new();
     private readonly List<CharacterId> _children = new();
+    private readonly List<CharacterId> _caregivers = new();
 
     public IReadOnlyList<CharacterId> Parents => _parents;
     public IReadOnlyList<CharacterId> Children => _children;
+    public IReadOnlyList<CharacterId> Caregivers => _caregivers;
 
     public bool TryAddParent(CharacterId parent)
     {
         if (!parent.IsAssigned || _parents.Contains(parent) || _parents.Count >= SkillRules.MaxParents)
             return false;
         _parents.Add(parent);
+        TryAddCaregiver(parent);
+        return true;
+    }
+
+    public bool TryAddCaregiver(CharacterId caregiver)
+    {
+        if (!caregiver.IsAssigned || _caregivers.Contains(caregiver))
+            return false;
+        _caregivers.Add(caregiver);
         return true;
     }
 
@@ -32,6 +43,17 @@ public sealed class FamilyLinks
 
 public static class FamilyQueries
 {
+    public static IEnumerable<CharacterState> CaregiversOf(PopulationRoster population, CharacterState character)
+    {
+        ArgumentNullException.ThrowIfNull(population);
+        ArgumentNullException.ThrowIfNull(character);
+        foreach (var id in character.FamilyLinks.Caregivers)
+        {
+            if (population.TryGet(id, out var caregiver))
+                yield return caregiver;
+        }
+    }
+
     public static IEnumerable<CharacterState> ParentsOf(PopulationRoster population, CharacterState character)
     {
         ArgumentNullException.ThrowIfNull(population);

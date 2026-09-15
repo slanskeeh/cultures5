@@ -32,6 +32,13 @@ public sealed class CharacterDecisionSystem
 
         DropStaleWorkplace(character);
 
+        if (SkillRules.IsDependent(character))
+        {
+            if (character.Needs.Hunger >= CharacterRules.HungerCritical && CanEatNow(character))
+                return ActionKind.Eat;
+            return ActionKind.Idle;
+        }
+
         if (character.Needs.Hunger >= CharacterRules.HungerCritical)
         {
             if (CanEatNow(character))

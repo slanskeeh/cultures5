@@ -6,6 +6,7 @@ using Cultures.Core.Ids;
 using Cultures.Core.Randomness;
 using Cultures.Core.Time;
 using Cultures.Population;
+using Cultures.Settlement;
 using Cultures.World;
 using Cultures.World.Commands;
 
@@ -54,6 +55,8 @@ public sealed class SimulationHost
         Teaching = new TeachingSystem(Population, World, Events, Clock);
         Creation = new CharacterCreation(Population, Ids, World, Events, Clock);
         Characters = new CharacterSimulation(World, Population, Clock, Events, Production, Teaching);
+        Settlements = new SettlementDirectory();
+        SettlementDetection = new SettlementSystem(World, Population, Buildings, Settlements, Ids, Events, Clock, Recipes);
 
         Commands.Register(new PingCommandHandler());
         Commands.Register(new MoveDebugCursorHandler(Cursor));
@@ -63,6 +66,7 @@ public sealed class SimulationHost
         Commands.Register(new TeachCharacterHandler(Population, Teaching, Characters.Navigator));
         Commands.Register(new CreateChildHandler(Creation));
         Commands.Register(new AddSkillExperienceHandler(Population));
+        Commands.Register(new EvaluateSettlementsHandler(SettlementDetection));
     }
 
     public ulong WorldSeed { get; }
@@ -82,13 +86,18 @@ public sealed class SimulationHost
     public CharacterCreation Creation { get; }
     public PopulationRoster Population { get; }
     public CharacterSimulation Characters { get; }
+    public SettlementDirectory Settlements { get; }
+    public SettlementSystem SettlementDetection { get; }
 
     public ulong Step(ulong ticks)
     {
         var previous = Clock.Tick;
         var advanced = Clock.Advance(ticks);
         for (ulong i = 0; i < advanced; i++)
+        {
             Characters.Tick();
+            SettlementDetection.Tick();
+        }
 
         if (advanced > 0)
             Events.Publish(new TickAdvancedEvent(Clock.Tick, previous, advanced));

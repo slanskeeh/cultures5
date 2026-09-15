@@ -24,8 +24,12 @@ public sealed class CharacterAgingSystem
     {
         if (ageYears >= CharacterRules.MaxLifespanYears)
             return CharacterLifeStage.Dead;
+        if (ageYears < CharacterRules.InfantUntilYears)
+            return CharacterLifeStage.Infant;
         if (ageYears < CharacterRules.ChildUntilYears)
             return CharacterLifeStage.Child;
+        if (ageYears < CharacterRules.AdolescentUntilYears)
+            return CharacterLifeStage.Adolescent;
         if (ageYears >= CharacterRules.ElderFromYears)
             return CharacterLifeStage.Elder;
         return CharacterLifeStage.Adult;

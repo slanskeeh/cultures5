@@ -541,6 +541,79 @@ Phase 6 — Emergent Settlements. Do not start automatically.
 - Player teaching command currently moves then teaches; queue/interrupt vs hunger is still OD-014.
 - Do not treat `FamilyId.None` as an implemented household.
 
+## 2026-09-16 — Task: Phase 6 Emergent Settlements
+
+### 1. Task
+Implement emergent settlements from characters, buildings, co-location, infrastructure and persistence. Correct newborns to age 0 / Infant. Do not start Phase 7.
+
+### 2. Done
+- Chunk occupancy clustering with horizontal wrap; qualification = people + buildings + shelter + storage.
+- Persistent `SettlementId`, derived wrap-aware core, deterministic `set.{hex}` name key, `CultureId.Neutral`.
+- Lifecycle Emerging → Established → Declining → Abandoned with hysteresis; abandoned identity kept; re-inhabitation issues a new id.
+- Membership written onto `CharacterState.Settlement`; `BuildingState.AssociatedSettlement` reassigned, buildings not deleted.
+- Derived statistics; no `SettlementInventory`. `HouseholdId.None` and `Leader = None` seams.
+- Periodic eval via `SettlementSystem` tick counter (not `Clock.Tick % n`). `EvaluateSettlementsCommand`.
+- Birth age 0 Infant; caregivers from parents; infants idle/eat only; Child and Adolescent may learn.
+- Debug HUD: settlement line, M/U/E, core/member overlay.
+
+### 3. Working / Verified
+- Domain tests: emergence, isolation, infrastructure gate, determinism, persistence to Established, interval counter, wrap seam, distant clusters, membership vs genealogy, decline/abandon/hysteresis/new id, stats, infant AI, life-stage transitions.
+- Solution build 0 warnings / 0 errors.
+- Godot 4.7.2.stable.mono headless `--quit-after 45` exit 0. Interactive settlement HUD was not clicked in a GUI session.
+
+### 4. Tests
+- 142/142 passing (`dotnet test -warnaserror`). Previously 125; +17 Phase 6 / life-stage tests.
+
+### 5. Bugs found
+- `ChooseKind` briefly lost the hunger-critical branch while adding Infant handling; restored before the green run.
+- `BuildingState.Lifecycle` was almost dropped when adding `AssociatedSettlement`; restored.
+- Teaching tests would fail if students stayed age 0 Infant (`CanLearn` requires age ≥ 4); tests now age students to Child.
+
+### 6. Bugs fixed
+- Infant decision path no longer falls through to work/storage seek.
+- Settlement eval does not fire once per inner tick after batched `Clock.Advance`.
+
+### 7. Known limitations / TODO
+- Save envelope v2 still does not persist characters, buildings, families, skills, or settlements.
+- Emergence/lifecycle numbers are provisional (OD-019).
+- Re-inhabitation identity policy is open (OD-018); Phase 6 uses a new `SettlementId`.
+- No leadership, taxes, trade, happiness, split/merge, or migration gameplay.
+- Infant care is idle/eat only (OD-022).
+- Visible Godot settlement inspect not GUI-verified.
+
+### 8. Architecture decisions
+- AD-058 occupancy clustering
+- AD-059 `SettlementId` ≠ coordinates
+- AD-060 lifecycle hysteresis
+- AD-061 mutable derived membership
+- AD-062 independent building association
+- AD-063 derived stats, no communal inventory
+- AD-064 culture/household/leader seams
+- AD-065 age 0 Infant + caregivers
+- AD-066 per-tick evaluation counter
+
+### 9. Files changed
+- `src/Cultures.Domain/Settlement/**` (rules, state, directory, system, commands, events, names)
+- `src/Cultures.Domain/Population/**` (Infant/Adolescent, caregivers, infant AI, snapshots)
+- `src/Cultures.Domain/Buildings/BuildingState.cs`, `Core/Ids/EntityIds.cs`, `Application/SimulationHost.cs`
+- `presentation/Main.cs`, `Main.tscn`, `WorldDebugMap.cs`
+- `tests/Cultures.Tests/SettlementTests.cs`, `FamilySkillTests.cs`, `EntityIdTests.cs`
+- `docs/DECISIONS.md`, `docs/MVP_ROADMAP.md`, `docs/SIMULATION_ARCHITECTURE.md`, `docs/DEVELOPMENT_LOG.md`
+
+### 10. Current project health
+- Build: working, 0 warnings, 0 errors
+- Tests: 142/142 passing
+- Runtime: headless Main boots
+- Known broken areas: none identified; settlement HUD not GUI-verified
+
+### 11. Next step
+Phase 7 — Large World and Simulation LOD. Do not start automatically.
+
+### 12. Notes for ChatGPT
+- Default 24 people + development buildings emerge after one 60-tick evaluation (`E` forces detect).
+- Do not treat `HouseholdId` or `CultureId.Neutral` as implemented household/faction systems.
+- Do not match abandoned settlements when a new community occupies the same buildings unless OD-018 is closed.
+
 
 
 

@@ -7,7 +7,9 @@ public static class CharacterRules
 {
     public const int DefaultPopulation = 24;
     public const float StartingAgeYears = 22f;
-    public const float ChildUntilYears = 16f;
+    public const float InfantUntilYears = 3f;
+    public const float ChildUntilYears = 12f;
+    public const float AdolescentUntilYears = 16f;
     public const float ElderFromYears = 60f;
     public const float MaxLifespanYears = 80f;
     public const float StartingHunger = 0.15f;

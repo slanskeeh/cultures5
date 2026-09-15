@@ -679,4 +679,115 @@ Not fixed. XP per work/teach, inheritance permille, and the production bonus thr
 Not fixed. Phase 5 birth is a debug/command mechanism with a population cap.
 
 ### OD-017 — Household versus genealogy
-`FamilyLinks` are parent/child IDs. `FamilyId` is unused. Whether a household identity is separate from genealogy remains open.
+`FamilyLinks` are parent/child IDs. Characters carry `HouseholdId.None` as a Phase 6 seam. `FamilyId` is unused. Household membership, home, and property remain unimplemented.
+
+## AD-058 — Settlements emerge from occupancy clustering
+
+Status: Accepted
+
+A settlement is created when a wrap-aware connected component of occupied chunks has enough living people, active buildings, shelter, and storage. Detection uses chunk 4-neighbour BFS, not pairwise character scans.
+
+Reason:
+Settlements must be a consequence of co-location and infrastructure, not a placed map object (AD-013).
+
+## AD-059 — Settlement identity is SettlementId, not coordinates
+
+Status: Accepted
+
+`SettlementId` is issued by `EntityIdFactory`. Core location is a derived wrap-aware centroid for UI/debug. Two communities at the same place across time can have different IDs.
+
+Reason:
+Coordinates are not a stable identity. Abandoned sites may be reused.
+
+## AD-060 — Settlement lifecycle uses hysteresis
+
+Status: Accepted (temporary thresholds)
+
+Stages: Emerging → Established → Declining → Abandoned. Consecutive qualifying evaluations promote Emerging to Established. Unmatched evaluations decline then abandon. A later qualifying match can recover Declining back to Established. Abandoned identity is kept.
+
+Reason:
+Prevent Established ↔ Abandoned flipping every evaluation.
+
+## AD-061 — Settlement membership is derived and mutable
+
+Status: Accepted
+
+Each evaluation writes `CharacterState.Settlement` from the cluster a living character currently occupies. Membership is not radius-only and is not a permanent personal property.
+
+Reason:
+Characters must be able to leave, join, or live outside a settlement later.
+
+## AD-062 — Buildings associate with settlements without exclusive ownership
+
+Status: Accepted
+
+`BuildingState.AssociatedSettlement` can be none, an active settlement, or a leftover abandoned association. Buildings are not deleted on abandon; a later settlement may reassign them.
+
+Reason:
+Buildings remain independent domain entities (ruins, frontier farms, reuse).
+
+## AD-063 — Settlement statistics are derived
+
+Status: Accepted
+
+Population, demographics, shelters, stored food, workers, and estimated farm food output are computed from characters and building inventories. There is no `SettlementInventory` that owns resources.
+
+Reason:
+Future taxation/trade need granular ownership. Current inventories stay on characters and buildings.
+
+## AD-064 — Culture and household remain seams
+
+Status: Accepted (temporary)
+
+Settlements store `CultureId.Neutral` and `CharacterId Leader = None`. Characters store `HouseholdId.None`. Phase 6 does not implement factions, leadership, or households.
+
+Reason:
+The data model must not assume one culture or Family == Household == Settlement.
+
+## AD-065 — Newborns start at age 0 as Infant
+
+Status: Accepted (temporary age thresholds)
+
+Birth sets `AgeYears = 0` and `LifeStage = Infant`. Infants are dependents: they do not work, teach, learn, or path independently. Parents are recorded as caregivers; caregiver is not hard-coded as mother.
+
+Reason:
+Phase 5 age-6 child placeholder was incorrect for later care, demography, and settlement stats.
+
+## AD-066 — Settlement evaluation uses a per-tick counter
+
+Status: Accepted
+
+`SettlementSystem` counts character ticks inside `SimulationHost.Step`. It does not use `Clock.Tick % interval`, because `Clock.Advance` jumps the tick before the per-tick loop.
+
+Reason:
+Keep periodic detection deterministic and avoid evaluating once per inner tick after a batched advance.
+
+## OD-018 — Abandoned identity on re-inhabitation
+
+**Status:** Open
+
+Whether a new community on an abandoned site inherits the old `SettlementId` or always receives a new one is not a final design decision. Phase 6 issues a new ID.
+
+## OD-019 — Exact emergence and lifecycle numbers
+
+**Status:** Open
+
+`SettlementRules` values (min people/buildings, evaluation interval, established/decline/abandon counts) are provisional.
+
+## OD-020 — Settlement naming and culture language
+
+**Status:** Open
+
+Phase 6 uses a deterministic `set.{hex}` name key. Final faction-language names are future work.
+
+## OD-021 — Leadership and offices
+
+**Status:** Open
+
+`SettlementState.Leader` exists as `CharacterId.None`. How a leader is chosen is not implemented.
+
+## OD-022 — Infant care
+
+**Status:** Open
+
+Infants idle unless they already have food to eat. Caregiver feeding, carrying, and household care are not simulated yet.

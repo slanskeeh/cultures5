@@ -22,6 +22,8 @@ public sealed class CharacterState
         Needs.Hunger = CharacterRules.StartingHunger;
         Needs.Fatigue = CharacterRules.StartingFatigue;
         Family = FamilyId.None;
+        Household = HouseholdId.None;
+        Settlement = SettlementId.None;
         AssignedWorkplace = WorkplaceId.None;
     }
 
@@ -39,6 +41,8 @@ public sealed class CharacterState
     public CharacterActivity Activity { get; } = new();
     public WorkplaceId AssignedWorkplace { get; set; }
     public FamilyId Family { get; set; }
+    public HouseholdId Household { get; set; }
+    public SettlementId Settlement { get; set; }
 
     public bool IsAlive => LifeStage != CharacterLifeStage.Dead && Health.IsAlive;
 
@@ -61,7 +65,8 @@ public sealed class CharacterState
         Skills.GetLevel(SkillType.Crafting),
         FamilyLinks.Parents.Count > 0 ? FamilyLinks.Parents[0].Value : 0UL,
         FamilyLinks.Parents.Count > 1 ? FamilyLinks.Parents[1].Value : 0UL,
-        FamilyLinks.Children.Count);
+        FamilyLinks.Children.Count,
+        Settlement.Value);
 }
 
 public readonly record struct CharacterSnapshot(
@@ -83,4 +88,5 @@ public readonly record struct CharacterSnapshot(
     int Crafting,
     ulong ParentA,
     ulong ParentB,
-    int ChildCount);
+    int ChildCount,
+    ulong Settlement);

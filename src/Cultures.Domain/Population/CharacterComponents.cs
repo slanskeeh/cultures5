@@ -5,10 +5,12 @@ namespace Cultures.Population;
 
 public enum CharacterLifeStage : byte
 {
-    Child = 0,
-    Adult = 1,
-    Elder = 2,
-    Dead = 3
+    Infant = 0,
+    Child = 1,
+    Adolescent = 2,
+    Adult = 3,
+    Elder = 4,
+    Dead = 5
 }
 
 public enum ActionKind : byte

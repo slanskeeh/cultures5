@@ -18,7 +18,7 @@ public static class SkillRules
     public const int MaxPopulation = 40;
     public const int MaxParents = 2;
     public const int MaxChildrenPerParent = 3;
-    public const float NewbornAgeYears = 6f;
+    public const float NewbornAgeYears = 0f;
     public const float MinLearningAgeYears = 4f;
     public const int AdultFarmingBase = 12;
     public const int AdultFarmingSpan = 16;
@@ -35,11 +35,15 @@ public static class SkillRules
     public static bool CanWork(CharacterState character) =>
         character.IsAlive && character.LifeStage is CharacterLifeStage.Adult or CharacterLifeStage.Elder;
 
+    public static bool IsDependent(CharacterState character) =>
+        character.IsAlive && character.LifeStage == CharacterLifeStage.Infant;
+
     public static bool CanLearn(CharacterState character) =>
         character.IsAlive
+        && !IsDependent(character)
         && character.AgeYears >= MinLearningAgeYears
         && character.LifeStage != CharacterLifeStage.Dead;
 
     public static bool CanTeach(CharacterState character) =>
-        character.IsAlive && character.AgeYears >= CharacterRules.ChildUntilYears;
+        character.IsAlive && character.LifeStage is CharacterLifeStage.Adult or CharacterLifeStage.Elder;
 }

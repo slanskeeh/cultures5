@@ -144,13 +144,13 @@ public sealed class TeachingSystem
 
     public TeachingIntent? ConsiderAutonomous(CharacterState character)
     {
-        if (!character.IsAlive || !character.Activity.NeedsDecision)
+        if (!character.IsAlive || SkillRules.IsDependent(character) || !character.Activity.NeedsDecision)
             return null;
         if (character.Needs.Hunger >= CharacterRules.HungerCritical
             || character.Needs.Fatigue >= CharacterRules.FatigueCritical)
             return null;
 
-        if (character.LifeStage == CharacterLifeStage.Child)
+        if (character.LifeStage is CharacterLifeStage.Child or CharacterLifeStage.Adolescent)
             return ConsiderStudent(character);
 
         return ConsiderTeacher(character);

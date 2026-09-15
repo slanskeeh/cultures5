@@ -25,6 +25,14 @@ public readonly record struct FamilyId(ulong Value) : IEntityId
     public override string ToString() => $"Family:{Value}";
 }
 
+public readonly record struct HouseholdId(ulong Value) : IEntityId
+{
+    public static HouseholdId None => new(0);
+    public bool IsAssigned => Value != 0;
+    public bool Equals(IEntityId? other) => other is HouseholdId id && Value == id.Value;
+    public override string ToString() => $"Household:{Value}";
+}
+
 public readonly record struct BuildingId(ulong Value) : IEntityId
 {
     public static BuildingId None => new(0);
@@ -39,6 +47,15 @@ public readonly record struct SettlementId(ulong Value) : IEntityId
     public bool IsAssigned => Value != 0;
     public bool Equals(IEntityId? other) => other is SettlementId id && Value == id.Value;
     public override string ToString() => $"Settlement:{Value}";
+}
+
+public readonly record struct CultureId(ulong Value) : IEntityId
+{
+    public static CultureId None => new(0);
+    public static CultureId Neutral => new(1);
+    public bool IsAssigned => Value != 0;
+    public bool Equals(IEntityId? other) => other is CultureId id && Value == id.Value;
+    public override string ToString() => $"Culture:{Value}";
 }
 
 public readonly record struct CivilizationId(ulong Value) : IEntityId
