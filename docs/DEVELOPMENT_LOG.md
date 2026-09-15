@@ -1,6 +1,6 @@
 # Development Log
 
-This file is the chronological, persistent development report for the project.
+This file is the chronological, persistent development report for the project. It is the only development log; do not duplicate it at the repository root.
 
 Its purpose is to make the current implementation state understandable to the user and to another AI agent without relying on chat history.
 
@@ -99,7 +99,7 @@ Its purpose is to make the current implementation state understandable to the us
 - Clock never reads FPS; the Node converts real time into integer `Step` calls at a fixed 0.1s policy.
 - Random uses PCG32 rather than `System.Random` so sequences stay stable across .NET runtime changes.
 - No GameManager singleton; `SimulationHost` is constructed by the shell (and by tests).
-- Development log is written both at repo root (`DEVELOPMENT_LOG.md`, required by `CURSOR_RULES.md`) and in `docs/DEVELOPMENT_LOG.md` (existing template location).
+- Development log lives only in `docs/DEVELOPMENT_LOG.md` (a root duplicate was later removed).
 
 **Next step**
 - Do not start Phase 1 automatically. Recommended next: restore or write the missing design docs (`DECISIONS.md` / `MVP_ROADMAP.md`), then Phase 1 logical world coordinates + wrap-aware grid (no procedural generation yet).
@@ -332,6 +332,50 @@ Phase 4 — Buildings and Production. Do not start automatically.
 - Work-as-food-spawner must be replaced by production buildings.
 - Decision priority (hunger > fatigue > work) is a starting rule, not final AI.
 - Default debug cursor now snaps to the first character so they are on-screen at boot.
+
+---
+
+## [2026-09-15] — Task: Keep a single development log
+
+### 1. Task
+Remove the duplicate root `DEVELOPMENT_LOG.md`. Canonical log is only `docs/DEVELOPMENT_LOG.md`.
+
+### 2. Done
+- Deleted root `DEVELOPMENT_LOG.md`.
+- `docs/CURSOR_RULES.md` now points at `docs/DEVELOPMENT_LOG.md` and forbids a second log.
+
+### 3. Working / Verified
+- Root log file is gone; `docs/DEVELOPMENT_LOG.md` remains.
+
+### 4. Tests
+- Not applicable (docs-only).
+
+### 5. Bugs found
+- None.
+
+### 6. Bugs fixed
+- None.
+
+### 7. Known limitations / TODO
+- Historical Phase 1–3 entries still mention that both logs were written at the time.
+
+### 8. Architecture decisions
+- None beyond the log location rule.
+
+### 9. Files changed
+- deleted `DEVELOPMENT_LOG.md`
+- `docs/CURSOR_RULES.md`
+- `docs/DEVELOPMENT_LOG.md`
+
+### 10. Current project health
+- Unchanged from Phase 3.
+
+### 11. Next step
+Phase 4 — Buildings and Production. Do not start automatically.
+
+### 12. Notes for ChatGPT
+- Ignore any older instruction to keep a root `DEVELOPMENT_LOG.md`.
+
 
 
 

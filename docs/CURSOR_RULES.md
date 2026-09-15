@@ -95,7 +95,7 @@ Interfaces should prepare the architecture; they should not create unnecessary u
 
 After every completed task, you MUST create/update the development report before considering the task finished.
 
-The report is stored in `DEVELOPMENT_LOG.md` at the repository root. Do not rely only on chat output: the repository report is the persistent source of development progress.
+The report is stored in `docs/DEVELOPMENT_LOG.md`. Do not create a second log at the repository root. Do not rely only on chat output: the repository report is the persistent source of development progress.
 
 For every task, record:
 1. **Task** — what was requested and the scope actually implemented.
@@ -122,10 +122,10 @@ For every task, record:
 
 ### Handoff requirement
 
-`DEVELOPMENT_LOG.md` is intended to be shared with ChatGPT when the user wants an external review of development progress.
+`docs/DEVELOPMENT_LOG.md` is intended to be shared with ChatGPT when the user wants an external review of development progress.
 
 When another agent continues the project:
-1. read `DEVELOPMENT_LOG.md`;
+1. read `docs/DEVELOPMENT_LOG.md`;
 2. read the latest entry first;
 3. inspect the relevant code/tests before changing anything;
 4. do not assume an item marked "implemented" is "working" unless the report says it was verified.
