@@ -1,0 +1,15 @@
+.godot/
+.vs/
+.idea/
+bin/
+obj/
+*.user
+*.csproj.user
+.DS_Store
+Thumbs.db
+*.swp
+nupkg/
+TestResults/
+src/**/*.uid
+tests/**/*.uid
+docs/**/*.uid
