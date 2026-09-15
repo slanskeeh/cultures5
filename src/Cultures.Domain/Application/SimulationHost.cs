@@ -54,7 +54,18 @@ public sealed class SimulationHost
         Population = PopulationSpawner.Spawn(World, Ids, worldSeed, populationCount);
         Teaching = new TeachingSystem(Population, World, Events, Clock);
         Creation = new CharacterCreation(Population, Ids, World, Events, Clock);
-        Characters = new CharacterSimulation(World, Population, Clock, Events, Production, Teaching);
+        Aggregate = new AggregateSimulation(World, Population, Buildings, Recipes, Events, Clock, Creation);
+        Lod = new LodSystem(
+            World,
+            Population,
+            Buildings,
+            Clock,
+            Events,
+            () => Cursor.Position,
+            Aggregate,
+            Production,
+            Teaching);
+        Characters = new CharacterSimulation(World, Population, Clock, Events, Production, Teaching, Lod);
         Settlements = new SettlementDirectory();
         SettlementDetection = new SettlementSystem(World, Population, Buildings, Settlements, Ids, Events, Clock, Recipes);
 
@@ -67,6 +78,11 @@ public sealed class SimulationHost
         Commands.Register(new CreateChildHandler(Creation));
         Commands.Register(new AddSkillExperienceHandler(Population));
         Commands.Register(new EvaluateSettlementsHandler(SettlementDetection));
+        Commands.Register(new RefreshLodHandler(Lod));
+        Commands.Register(new ForceChunkLodHandler(Lod));
+        Commands.Register(new ClearChunkLodOverrideHandler(Lod));
+        Commands.Register(new ProtectCharacterHandler(Population, Lod));
+        Commands.Register(new SetChunkPresentationHandler(Lod));
     }
 
     public ulong WorldSeed { get; }
@@ -88,6 +104,8 @@ public sealed class SimulationHost
     public CharacterSimulation Characters { get; }
     public SettlementDirectory Settlements { get; }
     public SettlementSystem SettlementDetection { get; }
+    public AggregateSimulation Aggregate { get; }
+    public LodSystem Lod { get; }
 
     public ulong Step(ulong ticks)
     {
@@ -97,6 +115,7 @@ public sealed class SimulationHost
         {
             Characters.Tick();
             SettlementDetection.Tick();
+            Lod.Tick();
         }
 
         if (advanced > 0)

@@ -29,6 +29,10 @@ public sealed class TeachCharacterHandler : ICommandHandler<TeachCharacterComman
             || !Population.TryGet(command.StudentId, out var student))
             return CommandResult.Fail("Unknown teacher or student.");
 
+        if (teacher.LodTier.IsAggregate() || student.LodTier.IsAggregate())
+            return CommandResult.Fail("Character is in aggregate simulation.");
+
+        teacher.IsPlayerCommanded = true;
         if (Teaching.TryBegin(teacher, student, command.Skill, interrupt: true, out var error))
             return CommandResult.Ok();
 

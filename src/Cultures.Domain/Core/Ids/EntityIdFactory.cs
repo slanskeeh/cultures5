@@ -12,6 +12,7 @@ public sealed class EntityIdFactory
     private ulong _nextCivilization = 1;
     private ulong _nextRegion = 1;
     private ulong _nextChunk = 1;
+    private ulong _nextMigrationGroup = 1;
 
     public CharacterId NextCharacter() => new(_nextCharacter++);
     public FamilyId NextFamily() => new(_nextFamily++);
@@ -20,4 +21,5 @@ public sealed class EntityIdFactory
     public CivilizationId NextCivilization() => new(_nextCivilization++);
     public RegionId NextRegion() => new(_nextRegion++);
     public ChunkId NextChunk() => new(_nextChunk++);
+    public MigrationGroupId NextMigrationGroup() => new(_nextMigrationGroup++);
 }

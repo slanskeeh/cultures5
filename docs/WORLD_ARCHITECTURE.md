@@ -107,27 +107,24 @@ A chunk may remain in simulation storage without an active scene.
 
 ## 8. Simulation LOD
 
-Tier 0:
-full nearby simulation.
+Phase 7 tiers:
 
-Tier 1:
-simplified local simulation.
+- Tier 0 Full — individual characters, needs, activity, production.
+- Tier 1 Reduced — same entities; behavior ticks may be thinned.
+- Tier 2 Aggregate — individuals retained but not ticked; bulk food/aging/production.
+- Tier 3 Macro — same as aggregate with a coarser (day) step; trend events only.
 
-Tier 2:
-macro population/economy simulation.
+Presentation load (`ChunkPresentationPresence`) is independent of these tiers.
 
-Tier 3:
-strategic trends and major events.
-
-Every major system must define what information is retained at lower LOD.
+Focus is the simulation cursor plus protected character chunks. Distance is wrap-aware Chebyshev in chunk space.
 
 ## 9. LOD invariant
 
 When converting detailed → aggregate:
-important totals and relationships must be preserved.
+characters, buildings, settlements, family links, skills and resource totals remain. Individual AI stops.
 
 When converting aggregate → detailed:
-the result must be plausible and derived from stored state.
+the same IDs resume individual simulation. No random NPC spawn.
 
 Do not generate random NPCs merely because a region became visible.
 

@@ -614,6 +614,81 @@ Phase 7 — Large World and Simulation LOD. Do not start automatically.
 - Do not treat `HouseholdId` or `CultureId.Neutral` as implemented household/faction systems.
 - Do not match abandoned settlements when a new community occupies the same buildings unless OD-018 is closed.
 
+## 2026-09-16 — Task: Phase 7 Large World and Simulation LOD
+
+### 1. Task
+Implement scalable simulation LOD: Full / Reduced / Aggregate / Macro, chunk simulation state independent of presentation, aggregation and deterministic reconstruction, without deleting the world when it is not rendered.
+
+### 2. Done
+- `SimulationLodClassifier` (wrap-aware Chebyshev) and `LodRules` cadences.
+- Sparse `ChunkSimulationDirectory` + derived census; presentation flag separate from tier.
+- `LodSystem` classifies from cursor + protected people; `CharacterSimulation` skips aggregate bodies.
+- Aggregation keeps `CharacterId`s, buildings, settlements, family, skills, inventories; reconstruction re-enables the same people.
+- `AggregateSimulation` hour/day bulk aging/food/farm cycles; demographic events; no fake personal history.
+- Protected selected/commanded characters stay Full; commands fail against aggregated targets.
+- `MigrationGroup` seam only.
+- Debug: L overlay, O refresh, 9/0 force chunk tier; Tab protects selection.
+
+### 3. Working / Verified
+- 155/155 tests including classification, wrap, aggregate/reconstruct, resources, family/settlement, protection, command rejection, census, presentation independence.
+- Solution build 0 warnings / 0 errors.
+- Godot 4.7.2.stable.mono headless `--quit-after 45` exit 0. LOD overlay was not clicked in a GUI session.
+- Large-world / 100k-character performance was not measured; only `WorldConfiguration.DebugSample` was used.
+
+### 4. Tests
+- 155/155 passing (`dotnet test -warnaserror`). Previously 142; +13 LOD tests.
+
+### 5. Bugs found
+- First census assertion expected only the set farming level and ignored other adults' seeded skills.
+- WorldDebugMap nullable `Host` warning after adding the overlay.
+
+### 6. Bugs fixed
+- Census test asserts `FarmingSkillSum >= 20`.
+- Debug map binds a local `host` after the null check.
+- Aggregate production no longer runs on every building in the world, only chunks that actually have aggregated people.
+
+### 7. Known limitations / TODO
+- Save envelope still does not persist characters, buildings, settlements or LOD.
+- Ordinary people are not compacted out of the roster (OD-024).
+- Radii/cadences and aggregate economy rates are provisional (OD-023, OD-025).
+- Debug 100×50 world often stays Full near the cursor; Force (9) is required to inspect aggregate locally.
+- No migration gameplay.
+- LOD HUD overlay not GUI-verified.
+
+### 8. Architecture decisions
+- AD-067 presentation ≠ simulation tier
+- AD-068 sparse chunk simulation state
+- AD-069 wrap-aware classification
+- AD-070 no deletion on aggregate
+- AD-071 protected individuals
+- AD-072 centralized cadences
+- AD-073 reconstruction of retained IDs
+- AD-074 demographic aggregate events
+- AD-075 migration seam
+
+### 9. Files changed
+- `src/Cultures.Domain/World/Lod*.cs`, `ChunkSimulationState.cs`, `AggregateSimulation.cs`
+- `src/Cultures.Domain/Population/CharacterState.cs`, `CharacterSimulation.cs`, `ILodPolicy.cs`, `MigrationGroup.cs`, `PopulationCommands.cs`
+- `src/Cultures.Domain/Core/Ids/EntityIds.cs`, `EntityIdFactory.cs`
+- `src/Cultures.Domain/Application/SimulationHost.cs`
+- `presentation/Main.cs`, `Main.tscn`, `WorldDebugMap.cs`
+- `tests/Cultures.Tests/LodTests.cs`
+- `docs/DECISIONS.md`, `docs/MVP_ROADMAP.md`, `docs/SIMULATION_ARCHITECTURE.md`, `docs/WORLD_ARCHITECTURE.md`, `docs/DEVELOPMENT_LOG.md`
+
+### 10. Current project health
+- Build: working, 0 warnings, 0 errors
+- Tests: 155/155 passing
+- Runtime: headless Main boots
+- Known broken areas: none identified; LOD overlay not GUI-verified
+
+### 11. Next step
+Phase 8 — Exploration. Do not start automatically.
+
+### 12. Notes for ChatGPT
+- Do not treat keeping every `CharacterState` in memory as the final 100k-scale design (OD-024).
+- Do not implement migration because `MigrationGroup` exists.
+- Classification uses the debug cursor, not FPS. `E` is settlements; `O` is LOD refresh.
+
 
 
 

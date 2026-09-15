@@ -16,7 +16,8 @@ public sealed class CharacterSimulation
         SimulationClock clock,
         EventBus events,
         ProductionSystem production,
-        TeachingSystem teaching)
+        TeachingSystem teaching,
+        ILodPolicy? lod = null)
     {
         World = world ?? throw new ArgumentNullException(nameof(world));
         Population = population ?? throw new ArgumentNullException(nameof(population));
@@ -24,6 +25,7 @@ public sealed class CharacterSimulation
         Events = events ?? throw new ArgumentNullException(nameof(events));
         Production = production ?? throw new ArgumentNullException(nameof(production));
         Teaching = teaching ?? throw new ArgumentNullException(nameof(teaching));
+        Lod = lod;
         Navigator = new GridNavigator(world);
         Aging = new CharacterAgingSystem(clock.Calendar);
         Needs = new CharacterNeedsSystem(clock.Calendar);
@@ -44,12 +46,15 @@ public sealed class CharacterSimulation
     public CharacterSurvivalSystem Survival { get; }
     public CharacterActionSystem Actions { get; }
     public CharacterDecisionSystem Decisions { get; }
+    public ILodPolicy? Lod { get; set; }
 
     public void Tick()
     {
         foreach (var character in Population.All)
         {
             if (!character.IsAlive)
+                continue;
+            if (Lod is not null && !Lod.SimulateBody(character))
                 continue;
 
             Needs.ApplyTick(character);
@@ -62,6 +67,9 @@ public sealed class CharacterSimulation
                 Teaching.Abandon(character);
                 continue;
             }
+
+            if (Lod is not null && !Lod.SimulateBehavior(character))
+                continue;
 
             Actions.Advance(character);
             Decisions.AssignNext(character);

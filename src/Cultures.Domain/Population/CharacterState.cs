@@ -43,6 +43,12 @@ public sealed class CharacterState
     public FamilyId Family { get; set; }
     public HouseholdId Household { get; set; }
     public SettlementId Settlement { get; set; }
+    public SimulationLodTier LodTier { get; set; } = SimulationLodTier.Full;
+    public bool IsPersistentIndividual { get; set; }
+    public bool IsPlayerCommanded { get; set; }
+
+    public bool IsProtectedFromAggregation => IsPersistentIndividual || IsPlayerCommanded;
+    public bool IsIndividuallySimulated => LodTier.IsDetailed() || IsProtectedFromAggregation;
 
     public bool IsAlive => LifeStage != CharacterLifeStage.Dead && Health.IsAlive;
 
@@ -66,7 +72,9 @@ public sealed class CharacterState
         FamilyLinks.Parents.Count > 0 ? FamilyLinks.Parents[0].Value : 0UL,
         FamilyLinks.Parents.Count > 1 ? FamilyLinks.Parents[1].Value : 0UL,
         FamilyLinks.Children.Count,
-        Settlement.Value);
+        Settlement.Value,
+        (byte)LodTier,
+        IsPersistentIndividual);
 }
 
 public readonly record struct CharacterSnapshot(
@@ -89,4 +97,6 @@ public readonly record struct CharacterSnapshot(
     ulong ParentA,
     ulong ParentB,
     int ChildCount,
-    ulong Settlement);
+    ulong Settlement,
+    byte LodTier,
+    bool PersistentIndividual);

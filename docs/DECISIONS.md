@@ -791,3 +791,102 @@ Phase 6 uses a deterministic `set.{hex}` name key. Final faction-language names 
 **Status:** Open
 
 Infants idle unless they already have food to eat. Caregiver feeding, carrying, and household care are not simulated yet.
+
+## AD-067 — Simulation LOD is independent of presentation
+
+Status: Accepted
+
+`SimulationLodTier` (Full / Reduced / Aggregate / Macro) is authoritative domain state. `ChunkPresentationPresence` is a separate flag. A chunk may be Unloaded in Godot and still run aggregate simulation.
+
+Reason:
+Visual representation is not simulation existence (AD-008).
+
+## AD-068 — Sparse chunk simulation state
+
+Status: Accepted
+
+`ChunkSimulationDirectory` stores on-demand `ChunkSimulationState` (tier, presentation, derived census). It is not a planet-sized array and is not the terrain chunk cache.
+
+Reason:
+Terrain generation cache and simulation LOD are different concerns.
+
+## AD-069 — LOD classification is wrap-aware chunk distance
+
+Status: Accepted (temporary radii)
+
+Tier is Chebyshev distance in chunk space from the simulation focus (`SimulationCursor`) and from protected characters. Horizontal chunk wrap is used; Y does not wrap. Classification runs on an interval, not every character every tick.
+
+Reason:
+Avoid O(N²) scans and keep wrap consistent with world topology.
+
+## AD-070 — Aggregation does not delete entities
+
+Status: Accepted (temporary representation)
+
+Ordinary characters keep `CharacterId` and `CharacterState`. Aggregate mode skips individual AI/needs ticks and applies bulk aging/food/production. Buildings and settlements remain in their directories.
+
+Reason:
+Do not respawn random NPCs. Identity, family, skills and inventories must survive Detailed → Aggregate → Detailed.
+
+## AD-071 — Protected individuals stay in detailed simulation
+
+Status: Accepted
+
+`IsPersistentIndividual` (selected) and `IsPlayerCommanded` (explicit command) force `LodTier.Full`. Commands targeting aggregated characters fail instead of mutating missing entities.
+
+Reason:
+Player control must not hit an entity destroyed by LOD.
+
+## AD-072 — LOD update frequencies are centralized
+
+Status: Accepted (temporary)
+
+`LodRules` holds radii and cadences. Full ticks every step; Reduced may skip behavior ticks; Aggregate uses hour-scale bulk steps; Macro uses day-scale bulk steps (`SimulationCalendar`).
+
+Reason:
+Do not scatter magic intervals across systems.
+
+## AD-073 — Reconstruction re-enables retained individuals
+
+Status: Accepted
+
+Reconstruction does not spawn a new population. It restores detailed ticking on the same IDs. Deterministic because no random replacement occurs.
+
+Reason:
+Same aggregate state + seed + time must match. Exact identity is guaranteed for retained characters in Phase 7.
+
+## AD-074 — Aggregate events are demographic
+
+Status: Accepted
+
+Aggregate births/deaths/food shortage/migration pressure are chunk-level events. LOD must not invent per-character histories for years spent in aggregate mode.
+
+Reason:
+No fake history.
+
+## AD-075 — MigrationGroup is a seam only
+
+Status: Accepted (temporary)
+
+`MigrationGroup` can name origin, destination, population, culture and member IDs. Phase 7 does not move groups between regions as gameplay.
+
+Reason:
+Prepare for migration without implementing it.
+
+## OD-023 — Exact LOD radii and cadences
+
+**Status:** Open
+
+`LodRules` values are provisional. Debug 100×50 worlds often remain Full around the cursor.
+
+## OD-024 — Compacting ordinary people out of the roster
+
+**Status:** Open
+
+Phase 7 keeps every `CharacterState` even when aggregated. Whether distant ordinary people may later exist only as census + a snapshot blob is not decided.
+
+## OD-025 — Aggregate birth, death and production rates
+
+**Status:** Open
+
+Bulk hunger/aging/farm cycles and optional macro births are placeholders, not final economy.

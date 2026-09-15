@@ -29,9 +29,10 @@ public partial class WorldDebugMap : Control
         if (Host is null)
             return;
 
-        var cursor = Host.Cursor.Position;
-        var topology = Host.World.Topology;
-        var width = Host.World.Configuration.Width;
+        var host = Host;
+        var cursor = host.Cursor.Position;
+        var topology = host.World.Topology;
+        var width = host.World.Configuration.Width;
         var center = Size / 2f;
 
         for (var dy = -RadiusY; dy <= RadiusY; dy++)
@@ -51,11 +52,18 @@ public partial class WorldDebugMap : Control
                     continue;
                 }
 
-                Host.World.Grid.TryGetCell(resolution.HorizontallyNormalized, out var terrain);
+                host.World.Grid.TryGetCell(resolution.HorizontallyNormalized, out var terrain);
                 var color = ColorFor(terrain);
                 var x = resolution.HorizontallyNormalized.X;
                 if (x == 0 || x == width - 1)
                     color = color.Lightened(0.16f);
+
+                if (ShowLod)
+                {
+                    var lodChunk = host.World.Chunks.ToAddress(
+                        new LogicalGridCoordinate(resolution.HorizontallyNormalized.X, resolution.HorizontallyNormalized.Y));
+                    color = color.Lerp(ColorForLod(host.Lod.Classify(lodChunk.Chunk)), 0.35f);
+                }
 
                 DrawRect(rect, color);
 
@@ -72,6 +80,7 @@ public partial class WorldDebugMap : Control
     public CharacterId? SelectedId { get; set; }
     public BuildingId? SelectedBuildingId { get; set; }
     public SettlementId? SelectedSettlementId { get; set; }
+    public bool ShowLod { get; set; }
 
     private void DrawSettlements(Vector2 center, LogicalGridCoordinate cursor)
     {
@@ -191,6 +200,8 @@ public partial class WorldDebugMap : Control
             var radius = !character.IsAlive
                 ? 4f
                 : character.LifeStage == CharacterLifeStage.Infant ? 4.5f : 6f;
+            if (character.LodTier.IsAggregate())
+                radius -= 1.5f;
             DrawCircle(pos, radius, ColorForAction(character));
             if (character.Settlement.IsAssigned)
                 DrawArc(pos, radius + 5f, 0, MathF.Tau, 12, ColorForSettlement(character.Settlement, SettlementLifecycle.Established));
@@ -237,4 +248,12 @@ public partial class WorldDebugMap : Control
 
         return color;
     }
+
+    private static Color ColorForLod(SimulationLodTier tier) => tier switch
+    {
+        SimulationLodTier.Full => new Color(0.20f, 0.85f, 0.35f),
+        SimulationLodTier.Reduced => new Color(0.85f, 0.75f, 0.20f),
+        SimulationLodTier.Aggregate => new Color(0.85f, 0.45f, 0.18f),
+        _ => new Color(0.45f, 0.20f, 0.55f)
+    };
 }

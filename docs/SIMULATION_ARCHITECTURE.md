@@ -320,23 +320,13 @@ Civilization
 
 ## 17. Macro simulation
 
-At low LOD, individual actions become aggregate flows.
+Phase 7 implements LOD as `LodSystem` + `AggregateSimulation`.
 
-Example:
+At Full/Reduced, individuals tick (Reduced may skip behavior ticks).
 
-Detailed:
-100 farmers produce individual amounts.
+At Aggregate/Macro, `CharacterSimulation` skips those people. Bulk steps apply hunger, aging, farm output and optional macro births. Events are demographic (`AggregateBirthsOccurredEvent`, `AggregateDeathsOccurredEvent`, `AggregateFoodShortageEvent`), not fake personal histories.
 
-Macro:
-Region calculates agricultural output from:
-- farmland;
-- population;
-- skill distribution;
-- climate;
-- inputs;
-- season.
-
-When detail resumes, the aggregate state becomes the initial condition for individual simulation.
+When detail resumes, the same `CharacterId`s continue. Census on `ChunkSimulationState` is derived, not a second inventory.
 
 ## 18. Save/load
 

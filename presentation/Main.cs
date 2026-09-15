@@ -33,6 +33,7 @@ public partial class Main : Control
         _map = GetNode<WorldDebugMap>("WorldDebugMap");
         _map.Host = _host;
         SnapToSelected();
+        ProtectSelected();
         Refresh();
     }
 
@@ -92,6 +93,19 @@ public partial class Main : Control
             case Key.E:
                 DebugEvaluateSettlements();
                 break;
+            case Key.L:
+                _map.ShowLod = !_map.ShowLod;
+                _lastCommand = _map.ShowLod ? "lod overlay on" : "lod overlay off";
+                break;
+            case Key.O:
+                DebugRefreshLod();
+                break;
+            case Key.Key9:
+                DebugForceLod(SimulationLodTier.Aggregate);
+                break;
+            case Key.Key0:
+                DebugForceLod(SimulationLodTier.Full);
+                break;
             default:
                 return;
         }
@@ -144,7 +158,11 @@ public partial class Main : Control
     {
         if (_host.Population.Count == 0)
             return;
+        var previous = _host.Population[_selectedIndex];
         _selectedIndex = (_selectedIndex + 1) % _host.Population.Count;
+        if (previous.IsPersistentIndividual)
+            _host.Commands.Execute(new ProtectCharacterCommand(previous.Id, false));
+        ProtectSelected();
         _lastCommand = $"selected {_host.Population[_selectedIndex].Id}";
     }
 
@@ -219,6 +237,27 @@ public partial class Main : Control
         _lastCommand = result.Success ? $"cursor to {settlement.Id} core" : result.Error ?? "snap failed";
     }
 
+    private void ProtectSelected()
+    {
+        if (_host.Population.Count == 0)
+            return;
+        var character = _host.Population[_selectedIndex];
+        _host.Commands.Execute(new ProtectCharacterCommand(character.Id, true));
+    }
+
+    private void DebugRefreshLod()
+    {
+        var result = _host.Commands.Execute(new RefreshLodCommand());
+        _lastCommand = result.Success ? "lod evaluated" : result.Error ?? "lod failed";
+    }
+
+    private void DebugForceLod(SimulationLodTier tier)
+    {
+        _host.World.Chunks.TryResolve(_host.Cursor.Position.ToWorld(), out var address);
+        var result = _host.Commands.Execute(new ForceChunkLodCommand(address.Chunk, tier));
+        _lastCommand = result.Success ? $"chunk {address.Chunk} → {tier}" : result.Error ?? "lod force failed";
+    }
+
     private void DebugEvaluateSettlements()
     {
         var result = _host.Commands.Execute(new EvaluateSettlementsCommand());
@@ -265,7 +304,7 @@ public partial class Main : Control
             : $"{selected.Id} {selected.LifeStage} age {selected.AgeYears:0.0}  {selected.Position}  " +
               $"hunger {selected.Needs.Hunger:0.00}  fatigue {selected.Needs.Fatigue:0.00}  " +
               $"food {selected.Inventory.GetQuantity(ResourceType.Food)}  {selected.Activity.Kind}  " +
-              $"work {workplace}  {selected.Settlement}";
+              $"work {workplace}  {selected.Settlement}  lod {selected.LodTier}";
         var familyLine = selected is null
             ? ""
             : $"parents {string.Join(",", selected.FamilyLinks.Parents.Select(id => id.Value.ToString()))}  " +
@@ -298,8 +337,18 @@ public partial class Main : Control
               $"bld {stats.ActiveBuildings} sh {stats.Shelters} st {stats.StorageBuildings}  " +
               $"food {stats.FoodStored} work {stats.Workers}/{stats.UnemployedAdults} prod {stats.EstimatedFoodProduction}";
 
+        var totals = _host.Lod.ResourceTotals();
+        var lodTier = _host.Lod.Classify(cursor);
+        _host.Lod.Chunks.TryGet(chunk.Chunk, out var chunkState);
+        var census = chunkState?.Census;
+        var lodLine =
+            $"lod {lodTier}  pres {chunkState?.Presentation.ToString() ?? "Unloaded"}  " +
+            $"pop {census?.Population ?? 0} bld {census?.Buildings ?? 0}  " +
+            $"food {census?.Food ?? 0}/{totals.Food} wood {totals.Wood} stone {totals.Stone}  " +
+            $"mig {census?.MigrationPressure ?? 0}";
+
         _label.Text =
-            "CULTURES — PHASE 6  emergent settlements\n" +
+            "CULTURES — PHASE 7  simulation LOD\n" +
             $"{paused}   seed {_host.WorldSeed}   people {_host.Population.Alive.Count()}/{_host.Population.Count}   " +
             $"buildings {_host.Buildings.Count}   settlements {_host.Settlements.Count}   tick {date.Tick}\n" +
             $"cursor {cursor}   {chunk}   {terrain.Biome} {water} elev {terrain.Elevation:0.00}\n" +
@@ -308,8 +357,9 @@ public partial class Main : Control
             $"{skillLine}\n" +
             $"{buildingLine}\n" +
             $"{settlementLine}\n" +
+            $"{lodLine}\n" +
             $"last: {_lastCommand}\n" +
-            "Arrows cursor   Tab person   C follow   B/V building   M/U settlement   E detect   N child   T teach   K skill   G mark   Space pause\n" +
+            "Arrows cursor   Tab person   C follow   B/V building   M/U settlement   E detect   L lod   O refresh   9 agg  0 full   N child   T teach   K skill   G mark   Space pause\n" +
             "F farm  S storage  H house  W workshop";
 
         _map.QueueRedraw();

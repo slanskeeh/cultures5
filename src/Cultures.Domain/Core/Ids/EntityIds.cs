@@ -81,3 +81,11 @@ public readonly record struct ChunkId(ulong Value) : IEntityId
     public bool Equals(IEntityId? other) => other is ChunkId id && Value == id.Value;
     public override string ToString() => $"Chunk:{Value}";
 }
+
+public readonly record struct MigrationGroupId(ulong Value) : IEntityId
+{
+    public static MigrationGroupId None => new(0);
+    public bool IsAssigned => Value != 0;
+    public bool Equals(IEntityId? other) => other is MigrationGroupId id && Value == id.Value;
+    public override string ToString() => $"MigrationGroup:{Value}";
+}

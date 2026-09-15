@@ -16,6 +16,10 @@ run/main_scene="res://presentation/Main.tscn"
 config/features=PackedStringArray("4.7", "C#", "Forward Plus")
 config/icon="res://icon.svg"
 
+[autoload]
+
+MCPRuntimeServer="*res://addons/godot_mcp_toolkit/runtime/mcp_runtime_server.gd"
+
 [display]
 
 window/size/viewport_width=1280
@@ -25,6 +29,16 @@ window/stretch/mode="canvas_items"
 [dotnet]
 
 project/assembly_name="Cultures"
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/godot_mcp_toolkit/plugin.cfg")
+
+[mcp_toolkit]
+
+status="No .mcp.json found — use Project > Tools > MCP Toolkit > Write .mcp.json to create one.
+
+NODE.JS v20.19.4 FOUND BUT 22+ REQUIRED — Update from https://nodejs.org"
 
 [rendering]
 

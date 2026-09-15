@@ -138,19 +138,30 @@ Settlements emerge without explicit player placement.
 
 ## Phase 7 — Large World and Simulation LOD
 
-Status: NEXT
+Status: COMPLETED
 
-Goals:
-- chunk streaming;
-- distant simulation;
-- aggregate populations;
-- LOD transitions;
-- migration.
+Delivered:
+- explicit Full / Reduced / Aggregate / Macro tiers;
+- sparse `ChunkSimulationState` independent of Godot nodes;
+- wrap-aware classification from simulation cursor + protected characters;
+- aggregation without deleting people, buildings or settlements;
+- deterministic reconstruction of the same IDs;
+- bulk aggregate/macro time steps for food/aging;
+- player protection and failed commands against aggregated targets;
+- `MigrationGroup` seam (no migration gameplay);
+- debug overlay L, refresh O, force 9/0.
+
+Not done (later / open):
+- streaming a huge world or proving 100k-character performance (only DebugSample was tested);
+- compacting ordinary people out of the roster (OD-024);
+- migration gameplay.
 
 Exit criteria:
 World can contain substantially more inhabitants than the fully detailed simulation area without frame rate collapsing.
 
 ## Phase 8 — Exploration
+
+Status: NEXT
 
 Goals:
 - fog/unknown world;
