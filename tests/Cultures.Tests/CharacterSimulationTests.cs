@@ -1,6 +1,7 @@
 using Cultures.Application;
 using Cultures.Core.Ids;
 using Cultures.Core.Time;
+using Cultures.Economy;
 using Cultures.Population;
 using Cultures.World;
 
@@ -54,16 +55,16 @@ public sealed class CharacterNeedsAndSurvivalTests
     public void Eating_decreases_hunger_and_consumes_food()
     {
         var world = new LogicalWorld(WorldConfiguration.DebugSample, 1);
-        var actions = new CharacterActionSystem(new GridNavigator(world));
+        var actions = new CharacterActionSystem(new GridNavigator(world), TestProduction.ForWorld(world));
         var character = Adult();
         character.Needs.Hunger = 0.9f;
-        character.Inventory.Food = 1;
+        Assert.True(character.Inventory.TryAdd(ResourceType.Food, 1));
         character.Activity.Start(ActionKind.Eat, CharacterRules.EatDurationTicks);
 
         for (var i = 0; i < CharacterRules.EatDurationTicks; i++)
             actions.Advance(character);
 
-        Assert.Equal(0, character.Inventory.Food);
+        Assert.Equal(0, character.Inventory.GetQuantity(ResourceType.Food));
         Assert.True(character.Needs.Hunger < 0.9f);
         Assert.Equal(ActionKind.None, character.Activity.Kind);
     }
@@ -72,7 +73,7 @@ public sealed class CharacterNeedsAndSurvivalTests
     public void Sleeping_decreases_fatigue()
     {
         var world = new LogicalWorld(WorldConfiguration.DebugSample, 1);
-        var actions = new CharacterActionSystem(new GridNavigator(world));
+        var actions = new CharacterActionSystem(new GridNavigator(world), TestProduction.ForWorld(world));
         var character = Adult();
         character.Needs.Fatigue = 0.95f;
         character.Activity.Start(ActionKind.Sleep, CharacterRules.SleepDurationTicks, character.Position);
@@ -105,7 +106,6 @@ public sealed class CharacterNeedsAndSurvivalTests
         var survival = new CharacterSurvivalSystem(calendar);
         var character = Adult();
         character.Needs.Hunger = 1f;
-        character.Inventory.Food = 0;
 
         for (ulong i = 0; i < calendar.TicksPerDay * 6; i++)
         {
@@ -197,7 +197,7 @@ public sealed class CharacterActionAndAiTests
     public void Actions_progress_and_complete()
     {
         var world = new LogicalWorld(WorldConfiguration.DebugSample, 1);
-        var actions = new CharacterActionSystem(new GridNavigator(world));
+        var actions = new CharacterActionSystem(new GridNavigator(world), TestProduction.ForWorld(world));
         var character = new CharacterState(new CharacterId(1), new LogicalGridCoordinate(0, 0), 1);
         character.Activity.Start(ActionKind.Idle, 3);
         actions.Advance(character);
@@ -211,7 +211,7 @@ public sealed class CharacterActionAndAiTests
     public void Decision_is_deterministic_for_the_same_state()
     {
         var world = new LogicalWorld(WorldConfiguration.DebugSample, 1);
-        var decisions = new CharacterDecisionSystem(new GridNavigator(world));
+        var decisions = new CharacterDecisionSystem(new GridNavigator(world), TestProduction.ForWorld(world));
         var a = Hungry(new CharacterId(1));
         var b = Hungry(new CharacterId(2));
         Assert.Equal(decisions.ChooseKind(a), decisions.ChooseKind(b));
@@ -228,6 +228,9 @@ public sealed class CharacterActionAndAiTests
         Assert.Equal(
             a.Population.All.Select(c => c.Snapshot()),
             b.Population.All.Select(c => c.Snapshot()));
+        Assert.Equal(
+            a.Buildings.All.Select(building => building.Snapshot()),
+            b.Buildings.All.Select(building => building.Snapshot()));
         Assert.Contains(a.Population.Alive, _ => true);
     }
 
@@ -237,14 +240,14 @@ public sealed class CharacterActionAndAiTests
         var host = new SimulationHost(1);
         host.Step(SimulationCalendar.Default.TicksPerDay * 2);
         Assert.True(host.Population.Alive.Count() >= CharacterRules.DefaultPopulation / 2);
-        Assert.Contains(host.Population.All, c => c.Activity.Kind != ActionKind.None || c.Inventory.Food >= 0);
+        Assert.Contains(host.Population.All, c => c.Activity.Kind != ActionKind.None || c.Inventory.GetQuantity(ResourceType.Food) >= 0);
     }
 
     private static CharacterState Hungry(CharacterId id)
     {
         var character = new CharacterState(id, new LogicalGridCoordinate(0, 0), 1);
         character.Needs.Hunger = 0.9f;
-        character.Inventory.Food = 2;
+        Assert.True(character.Inventory.TryAdd(ResourceType.Food, 2));
         return character;
     }
 }

@@ -6,7 +6,8 @@ public enum MovementBlock : byte
 {
     None = 0,
     OutsideWorld = 1,
-    Terrain = 2
+    Terrain = 2,
+    Occupancy = 3
 }
 
 /// <summary>
@@ -24,7 +25,7 @@ public sealed class GridNavigator
     public bool IsPassable(LogicalGridCoordinate cell)
     {
         var terrain = World.Grid.GetCell(cell);
-        return terrain.Passable;
+        return terrain.Generated.Passable && !terrain.Occupancy.BlocksMovement;
     }
 
     public bool TryNeighbor(
@@ -41,9 +42,16 @@ public sealed class GridNavigator
             return false;
         }
 
-        if (!IsPassable(next))
+        var terrain = World.Grid.GetCell(next);
+        if (!terrain.Generated.Passable)
         {
             block = MovementBlock.Terrain;
+            return false;
+        }
+
+        if (terrain.Occupancy.BlocksMovement)
+        {
+            block = MovementBlock.Occupancy;
             return false;
         }
 

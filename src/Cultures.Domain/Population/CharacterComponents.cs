@@ -39,11 +39,6 @@ public sealed class CharacterHealth
     public bool IsAlive => Current > 0f;
 }
 
-public sealed class CharacterInventory
-{
-    public int Food { get; set; }
-}
-
 /// <summary>
 /// Current action instance. Extensible by Kind; not a per-verb god class.
 /// </summary>

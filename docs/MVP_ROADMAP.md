@@ -82,23 +82,26 @@ Exit criteria: autonomous population for multiple simulation days, determinism t
 
 ## Phase 4 — Buildings and Production
 
-Status: NEXT
+Status: COMPLETED
 
-Goals:
-- building placement;
-- construction;
-- workers;
-- storage;
-- resources;
-- production;
-- environmental production variants.
+Delivered:
+- `BuildingId` / `BuildingDefinition` / `BuildingState`;
+- placement, footprints, occupancy, removal;
+- Food/Wood/Stone inventories;
+- data-driven recipes and workplaces;
+- production → storage → eat;
+- shelter rest;
+- buildings block navigation;
+- lifecycle with instant debug completion;
+- debug letters F/S/H/W.
 
-First building set should be deliberately small.
+Not a settlement. Construction economy, biome product catalogue, seasons and skills were intentionally not implemented.
 
-Exit criteria:
-A settlement can produce food and basic materials autonomously.
+Exit criteria: autonomous food/material loop, occupancy/wrap tests, determinism.
 
 ## Phase 5 — Families and Skills
+
+Status: NEXT
 
 Goals:
 - families;

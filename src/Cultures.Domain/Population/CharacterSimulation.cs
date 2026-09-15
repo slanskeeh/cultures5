@@ -1,3 +1,4 @@
+using Cultures.Buildings;
 using Cultures.Core.Events;
 using Cultures.Core.Time;
 using Cultures.World;
@@ -9,24 +10,31 @@ namespace Cultures.Population;
 /// </summary>
 public sealed class CharacterSimulation
 {
-    public CharacterSimulation(LogicalWorld world, PopulationRoster population, SimulationClock clock, EventBus events)
+    public CharacterSimulation(
+        LogicalWorld world,
+        PopulationRoster population,
+        SimulationClock clock,
+        EventBus events,
+        ProductionSystem production)
     {
         World = world ?? throw new ArgumentNullException(nameof(world));
         Population = population ?? throw new ArgumentNullException(nameof(population));
         Clock = clock ?? throw new ArgumentNullException(nameof(clock));
         Events = events ?? throw new ArgumentNullException(nameof(events));
+        Production = production ?? throw new ArgumentNullException(nameof(production));
         Navigator = new GridNavigator(world);
         Aging = new CharacterAgingSystem(clock.Calendar);
         Needs = new CharacterNeedsSystem(clock.Calendar);
         Survival = new CharacterSurvivalSystem(clock.Calendar);
-        Actions = new CharacterActionSystem(Navigator);
-        Decisions = new CharacterDecisionSystem(Navigator);
+        Actions = new CharacterActionSystem(Navigator, production);
+        Decisions = new CharacterDecisionSystem(Navigator, production);
     }
 
     public LogicalWorld World { get; }
     public PopulationRoster Population { get; }
     public SimulationClock Clock { get; }
     public EventBus Events { get; }
+    public ProductionSystem Production { get; }
     public GridNavigator Navigator { get; }
     public CharacterAgingSystem Aging { get; }
     public CharacterNeedsSystem Needs { get; }
@@ -47,6 +55,7 @@ public sealed class CharacterSimulation
             if (!character.IsAlive)
             {
                 Events.Publish(new CharacterDiedEvent(Clock.Tick, character.Id, character.Position));
+                Production.ReleaseWorkplace(character);
                 continue;
             }
 

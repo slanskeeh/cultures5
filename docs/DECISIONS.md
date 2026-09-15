@@ -300,7 +300,7 @@ Need a reproducible 20–30 population without implementing Phase 6.
 
 ## AD-034 — Shared cells in Phase 3
 
-Status: Accepted (temporary)
+Status: Superseded by AD-043
 
 Characters do not reserve occupancy. Multiple people may stand on one cell.
 
@@ -309,12 +309,93 @@ Avoid coupling population to the debug occupancy overlay before buildings exist.
 
 ## AD-035 — Placeholder food and work cell
 
-Status: Accepted (temporary)
+Status: Superseded by AD-038 / AD-040 / AD-044
 
 Food is an integer in personal inventory. Work is a shared land cell that grants food on completing Work. Sleep is allowed on any passable cell.
 
 Reason:
 Prove eat/sleep/work loops without economy, professions or housing.
+
+## AD-036 — Building definition vs instance
+
+Status: Accepted
+
+`BuildingDefinition` describes a type (footprint, workplaces, recipe, storage, shelter). `BuildingState` is a world instance with `BuildingId`, origin, lifecycle, inventory and workers. Location is never stored on the definition. Godot Nodes are not identity.
+
+Reason:
+Matches ARCHITECTURE data-vs-state and keeps future LOD/save independent of presentation.
+
+## AD-037 — Occupancy overlay carries BuildingId
+
+Status: Accepted
+
+Terrain remains generated geography. Dynamic occupancy is a sparse overlay that can mark a cell as a building (with `BuildingId`) or a debug marker. Occupancy is not a universal entity manager.
+
+Reason:
+Phase 4 must distinguish empty / building-occupied / blocked without putting entity lists on `TerrainCell`.
+
+## AD-038 — Integer resource inventory
+
+Status: Accepted
+
+`ResourceType` + `Inventory` with integer quantities. Add/Remove/Has/GetQuantity fail deterministically on invalid amounts. Phase 4 resources: Food, Wood, Stone.
+
+Reason:
+Replace Phase 3 personal food int with a generic model that characters, buildings and recipes can share.
+
+## AD-039 — Data-driven recipes and environmental modifier seam
+
+Status: Accepted
+
+Production uses `ProductionRecipe` plus `ProductionResolver`. Phase 4 environment is `NeutralEnvironmentProductionModifier` (1.0x). Duration and outputs are resolved, not hard-coded per building type in `if (Farm)` chains. Worker is passed into evaluate/complete so skills can matter later.
+
+Reason:
+Farm is a function; biome/season/skill must be able to change the result later without TemperateFarm/ForestFarm types.
+
+## AD-040 — Workplaces with access cells
+
+Status: Accepted
+
+A building may have zero or more `WorkplaceSlot`s. Workers stand on a passable access neighbor, not inside a blocked footprint. Characters hold `AssignedWorkplace`, not a profession.
+
+Reason:
+Support multiple workplaces later without rewriting character activity, and keep navigation around blocking buildings.
+
+## AD-041 — Instant debug construction
+
+Status: Accepted (temporary)
+
+Lifecycle is Planned / Constructing / Active / Disabled. Phase 4 placement completes immediately to Active. No hauling or construction workers.
+
+Reason:
+The architecture must exist now; full construction economy is out of scope.
+
+## AD-042 — Temporary development site, not a settlement
+
+Status: Accepted (temporary)
+
+Bootstrap places storage, shelter, two farms and a workshop near the land origin. This is not Phase 6 settlement formation.
+
+Reason:
+Exercise production without inventing civilization.
+
+## AD-043 — Building footprints block movement
+
+Status: Accepted
+
+Building occupancy sets `BlocksMovement` from the definition (Phase 4: all development buildings block). Characters still do not occupy cells (AD-034 remainder). Navigator treats blocked occupancy as impassable.
+
+Reason:
+Characters must walk around buildings. Doors/entrances are future work.
+
+## AD-044 — Food from storage, sleep at shelter
+
+Status: Accepted
+
+Work produces recipe outputs onto the building, then routes to storage. Characters take Food from storage access and eat it. Sleep requires an active shelter access cell (OD-012 superseded).
+
+Reason:
+Replace the Phase 3 work→personal-food and sleep-anywhere loops.
 
 ## Open decisions
 
@@ -352,7 +433,7 @@ Not fixed. Implementation currently treats both Y extremes as cold poles.
 Not fixed. Phase 2 noise frequencies, sea level, polar band and biome thresholds are temporary.
 
 ### OD-012 — Rest location vs housing
-Phase 3 sleeps on any passable cell. Buildings should replace this.
+Superseded by AD-044. Phase 4 sleeps at shelter access. Household ownership remains future work.
 
 ### OD-013 — Character movement costs and occupancy
-Phase 3 ignores terrain cost and does not occupy cells. Future traffic/buildings will need a decision.
+Buildings occupy and can block cells (AD-043). Characters still do not occupy cells. Terrain movement costs remain undecided.

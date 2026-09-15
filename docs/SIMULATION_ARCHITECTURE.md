@@ -209,6 +209,8 @@ A Farm does not inherently mean Wheat.
 
 The production resolver evaluates context.
 
+Phase 4 implements this as `ProductionResolver` + `IEnvironmentProductionModifier`. The current modifier is neutral (1.0x). Do not add biome-specific building types; change the resolver/modifier instead.
+
 ## 12. Settlements
 
 Settlement emergence evaluates:

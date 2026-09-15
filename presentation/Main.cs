@@ -1,4 +1,6 @@
 using Cultures.Application;
+using Cultures.Buildings;
+using Cultures.Economy;
 using Cultures.Population;
 using Cultures.World;
 using Cultures.World.Commands;
@@ -7,7 +9,7 @@ using Godot;
 namespace Cultures.Presentation;
 
 /// <summary>
-/// Application shell: clock, world cursor, and character debug inspect.
+/// Application shell: clock, world cursor, character and building debug inspect.
 /// Domain state is not stored on this Node.
 /// </summary>
 public partial class Main : Control
@@ -20,6 +22,7 @@ public partial class Main : Control
     private double _accumulator;
     private string _lastCommand = "ready";
     private int _selectedIndex;
+    private int _selectedBuildingIndex;
 
     public override void _Ready()
     {
@@ -63,6 +66,12 @@ public partial class Main : Control
             case Key.C:
                 SnapToSelected();
                 break;
+            case Key.B:
+                CycleBuilding();
+                break;
+            case Key.V:
+                SnapToBuilding();
+                break;
             default:
                 return;
         }
@@ -98,6 +107,12 @@ public partial class Main : Control
     {
         var position = _host.Cursor.Position.ToWorld();
         _host.World.Grid.TryGetOccupancy(position, out var current);
+        if (current.Kind == OccupantKind.Building)
+        {
+            _lastCommand = "cell occupied by building";
+            return;
+        }
+
         var next = current.IsOccupied ? Occupancy.Empty : Occupancy.DebugMarker;
         var result = _host.Commands.Execute(new SetOccupancyCommand(position, next));
         _lastCommand = result.Success
@@ -113,6 +128,14 @@ public partial class Main : Control
         _lastCommand = $"selected {_host.Population[_selectedIndex].Id}";
     }
 
+    private void CycleBuilding()
+    {
+        if (_host.Buildings.Count == 0)
+            return;
+        _selectedBuildingIndex = (_selectedBuildingIndex + 1) % _host.Buildings.Count;
+        _lastCommand = $"selected {_host.Buildings[_selectedBuildingIndex].Id}";
+    }
+
     private void SnapToSelected()
     {
         if (_host.Population.Count == 0)
@@ -124,6 +147,17 @@ public partial class Main : Control
         _lastCommand = result.Success ? $"cursor to {character.Id}" : result.Error ?? "snap failed";
     }
 
+    private void SnapToBuilding()
+    {
+        if (_host.Buildings.Count == 0)
+            return;
+        var building = _host.Buildings[_selectedBuildingIndex];
+        var dx = _host.World.Topology.SignedHorizontalDelta(_host.Cursor.Position.X, building.Origin.X);
+        var dy = building.Origin.Y - _host.Cursor.Position.Y;
+        var result = _host.Commands.Execute(new MoveDebugCursorCommand(dx, dy));
+        _lastCommand = result.Success ? $"cursor to {building.Id}" : result.Error ?? "snap failed";
+    }
+
     private void Refresh()
     {
         var date = _host.Clock.Date;
@@ -133,22 +167,39 @@ public partial class Main : Control
         var paused = _host.Clock.IsPaused ? "PAUSED" : "RUNNING";
         var water = terrain.IsWater ? "water" : "land";
         var selected = _host.Population.Count > 0 ? _host.Population[_selectedIndex] : null;
+        var selectedBuilding = _host.Buildings.Count > 0 ? _host.Buildings[_selectedBuildingIndex] : null;
+        var cursorBuilding = _host.Buildings.FindAt(cursor);
+        var inspectBuilding = cursorBuilding ?? selectedBuilding;
         _map.SelectedId = selected?.Id;
+        _map.SelectedBuildingId = inspectBuilding?.Id;
 
+        var workplace = selected is { AssignedWorkplace.IsAssigned: true }
+            ? selected.AssignedWorkplace.ToString()
+            : "none";
         var characterLine = selected is null
             ? "no population"
             : $"{selected.Id} {selected.LifeStage} age {selected.AgeYears:0.0}  {selected.Position}  " +
               $"hunger {selected.Needs.Hunger:0.00}  fatigue {selected.Needs.Fatigue:0.00}  " +
-              $"hp {selected.Health.Current:0.00}  food {selected.Inventory.Food}  {selected.Activity.Kind}";
+              $"food {selected.Inventory.GetQuantity(ResourceType.Food)}  {selected.Activity.Kind}  work {workplace}";
+
+        var buildingLine = inspectBuilding is null
+            ? "no building"
+            : $"{inspectBuilding.Id} {inspectBuilding.TypeId} {inspectBuilding.Lifecycle} {inspectBuilding.Origin}  " +
+              $"food {inspectBuilding.Inventory.GetQuantity(ResourceType.Food)}  " +
+              $"wood {inspectBuilding.Inventory.GetQuantity(ResourceType.Wood)}  " +
+              $"recipe {inspectBuilding.Production.CurrentRecipe?.Value ?? inspectBuilding.Definition.Recipe?.Value ?? "-"}  " +
+              $"prod {inspectBuilding.Production.ProgressTicks}/{inspectBuilding.Production.DurationTicks}  " +
+              $"workers {string.Join(",", inspectBuilding.Workplaces.Select(w => w.Worker.IsAssigned ? w.Worker.Value.ToString() : "-"))}";
 
         _label.Text =
-            "CULTURES — PHASE 3  living characters\n" +
-            $"{paused}   seed {_host.WorldSeed}   people {_host.Population.Alive.Count()}/{_host.Population.Count}   tick {date.Tick}\n" +
+            "CULTURES — PHASE 4  buildings and production\n" +
+            $"{paused}   seed {_host.WorldSeed}   people {_host.Population.Alive.Count()}/{_host.Population.Count}   buildings {_host.Buildings.Count}   tick {date.Tick}\n" +
             $"cursor {cursor}   {chunk}   {terrain.Biome} {water} elev {terrain.Elevation:0.00}\n" +
             $"{characterLine}\n" +
+            $"{buildingLine}\n" +
             $"last: {_lastCommand}\n" +
-            "Arrows cursor   Tab select   C follow   G mark   Space pause\n" +
-            "white ring = selected   orange eat   blue sleep   brown work   white move";
+            "Arrows cursor   Tab person   C follow   B building   V to building   G mark   Space pause\n" +
+            "F farm  S storage  H house  W workshop";
 
         _map.QueueRedraw();
     }

@@ -1,15 +1,19 @@
+using Cultures.Buildings;
+using Cultures.Economy;
 using Cultures.World;
 
 namespace Cultures.Population;
 
 public sealed class CharacterActionSystem
 {
-    public CharacterActionSystem(GridNavigator navigator)
+    public CharacterActionSystem(GridNavigator navigator, ProductionSystem production)
     {
         Navigator = navigator ?? throw new ArgumentNullException(nameof(navigator));
+        Production = production ?? throw new ArgumentNullException(nameof(production));
     }
 
     public GridNavigator Navigator { get; }
+    public ProductionSystem Production { get; }
 
     public void Advance(CharacterState character)
     {
@@ -25,6 +29,9 @@ public sealed class CharacterActionSystem
                 character.Needs.Fatigue -= 1f / CharacterRules.SleepDurationTicks;
                 character.Needs.Clamp();
                 character.Activity.Advance();
+                break;
+            case ActionKind.Work:
+                AdvanceWork(character);
                 break;
             default:
                 character.Activity.Advance();
@@ -53,26 +60,47 @@ public sealed class CharacterActionSystem
         character.Activity.RemainingPath.Dequeue();
         character.Position = next;
         character.Activity.Advance();
+        if (character.Activity.IsComplete)
+            TryTakeFood(character);
     }
 
-    private static void Complete(CharacterState character)
+    private void AdvanceWork(CharacterState character)
+    {
+        if (character.AssignedWorkplace.IsAssigned
+            && Production.Buildings.TryGet(character.AssignedWorkplace.Building, out var building))
+        {
+            Production.AdvanceWork(building);
+        }
+
+        character.Activity.Advance();
+    }
+
+    private void Complete(CharacterState character)
     {
         switch (character.Activity.Kind)
         {
             case ActionKind.Eat:
-                if (character.Inventory.Food > 0)
+                if (character.Inventory.TryRemove(ResourceType.Food, 1))
                 {
-                    character.Inventory.Food--;
                     character.Needs.Hunger -= CharacterRules.EatHungerRestore;
                     character.Needs.Clamp();
                 }
                 break;
             case ActionKind.Work:
-                if (character.Inventory.Food < CharacterRules.MaxFood)
-                    character.Inventory.Food++;
+                Production.TryCompleteWork(character);
                 break;
         }
 
         character.Activity.Cancel();
+    }
+
+    private void TryTakeFood(CharacterState character)
+    {
+        var building = Production.BuildingAtAccess(character.Position);
+        if (building is null || !building.Definition.IsStorage)
+            return;
+        if (character.Inventory.Has(ResourceType.Food, 1))
+            return;
+        building.Inventory.TryTransferTo(character.Inventory, ResourceType.Food, 1);
     }
 }

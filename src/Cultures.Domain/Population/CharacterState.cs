@@ -1,4 +1,6 @@
+using Cultures.Buildings;
 using Cultures.Core.Ids;
+using Cultures.Economy;
 using Cultures.World;
 
 namespace Cultures.Population;
@@ -19,8 +21,8 @@ public sealed class CharacterState
         LifeStage = CharacterLifeStage.Adult;
         Needs.Hunger = CharacterRules.StartingHunger;
         Needs.Fatigue = CharacterRules.StartingFatigue;
-        Inventory.Food = CharacterRules.StartingFood;
         Family = FamilyId.None;
+        AssignedWorkplace = WorkplaceId.None;
     }
 
     public CharacterId Id { get; }
@@ -31,9 +33,9 @@ public sealed class CharacterState
     public LogicalGridCoordinate Position { get; set; }
     public CharacterNeeds Needs { get; } = new();
     public CharacterHealth Health { get; } = new();
-    public CharacterInventory Inventory { get; } = new();
+    public Inventory Inventory { get; } = new(CharacterRules.PersonalInventoryCapacity);
     public CharacterActivity Activity { get; } = new();
-    public LogicalGridCoordinate WorkCell { get; set; }
+    public WorkplaceId AssignedWorkplace { get; set; }
     public FamilyId Family { get; set; }
 
     public bool IsAlive => LifeStage != CharacterLifeStage.Dead && Health.IsAlive;
@@ -46,9 +48,11 @@ public sealed class CharacterState
         Needs.Hunger,
         Needs.Fatigue,
         Health.Current,
-        Inventory.Food,
+        Inventory.GetQuantity(ResourceType.Food),
         Activity.Kind,
-        Activity.ProgressTicks);
+        Activity.ProgressTicks,
+        AssignedWorkplace.Building.Value,
+        AssignedWorkplace.Slot);
 }
 
 public readonly record struct CharacterSnapshot(
@@ -61,4 +65,6 @@ public readonly record struct CharacterSnapshot(
     float Health,
     int Food,
     ActionKind Action,
-    int ActionProgress);
+    int ActionProgress,
+    ulong WorkplaceBuilding,
+    int WorkplaceSlot);

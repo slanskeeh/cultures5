@@ -17,12 +17,11 @@ public static class CharacterRules
     public const float HungerCritical = 0.75f;
     public const float FatigueCritical = 0.80f;
     public const float EatHungerRestore = 0.55f;
-    public const int StartingFood = 1;
-    public const int MaxFood = 4;
+    public const int PersonalInventoryCapacity = 8;
     public const int EatDurationTicks = 8;
     public const int SleepDurationTicks = 60;
     public const int WorkDurationTicks = 24;
     public const int IdleDurationTicks = 8;
     public const float StarvationDamagePerDay = 0.20f;
-    public const int PathSearchLimit = 80;
+    public const int PathSearchLimit = 120;
 }

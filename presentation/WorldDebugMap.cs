@@ -1,4 +1,5 @@
 using Cultures.Application;
+using Cultures.Buildings;
 using Cultures.Core.Ids;
 using Cultures.Population;
 using Cultures.World;
@@ -62,10 +63,77 @@ public partial class WorldDebugMap : Control
             }
         }
 
+        DrawBuildings(center, cursor);
         DrawCharacters(center, cursor);
     }
 
     public CharacterId? SelectedId { get; set; }
+    public BuildingId? SelectedBuildingId { get; set; }
+
+    private void DrawBuildings(Vector2 center, LogicalGridCoordinate cursor)
+    {
+        if (Host is null)
+            return;
+
+        var font = ThemeDB.FallbackFont;
+        foreach (var building in Host.Buildings.All)
+        {
+            foreach (var cell in building.FootprintCells)
+            {
+                var dx = Host.World.Topology.SignedHorizontalDelta(cursor.X, cell.X);
+                var dy = cell.Y - cursor.Y;
+                if (Math.Abs(dx) > RadiusX || Math.Abs(dy) > RadiusY)
+                    continue;
+
+                var pos = new Vector2(
+                    center.X + dx * CellSize,
+                    center.Y + dy * CellSize);
+                var letter = LetterFor(building.TypeId);
+                DrawRect(
+                    new Rect2(pos.X - CellSize * 0.4f, pos.Y - CellSize * 0.4f, CellSize * 0.8f, CellSize * 0.8f),
+                    ColorForBuilding(building),
+                    filled: true);
+                DrawString(
+                    font,
+                    pos + new Vector2(-5, 5),
+                    letter,
+                    HorizontalAlignment.Left,
+                    -1,
+                    12,
+                    new Color(0.08f, 0.08f, 0.08f));
+                if (SelectedBuildingId == building.Id)
+                    DrawRect(
+                        new Rect2(pos.X - CellSize * 0.5f, pos.Y - CellSize * 0.5f, CellSize, CellSize),
+                        new Color(1f, 1f, 1f),
+                        filled: false,
+                        width: 2);
+            }
+        }
+    }
+
+    private static string LetterFor(BuildingTypeId type)
+    {
+        if (type == BuildingTypeId.Farm)
+            return "F";
+        if (type == BuildingTypeId.Storage)
+            return "S";
+        if (type == BuildingTypeId.Shelter)
+            return "H";
+        if (type == BuildingTypeId.Workshop)
+            return "W";
+        return "?";
+    }
+
+    private static Color ColorForBuilding(BuildingState building)
+    {
+        if (building.TypeId == BuildingTypeId.Farm)
+            return new Color(0.55f, 0.72f, 0.28f);
+        if (building.TypeId == BuildingTypeId.Storage)
+            return new Color(0.72f, 0.58f, 0.28f);
+        if (building.TypeId == BuildingTypeId.Shelter)
+            return new Color(0.62f, 0.48f, 0.38f);
+        return new Color(0.50f, 0.50f, 0.58f);
+    }
 
     private void DrawCharacters(Vector2 center, LogicalGridCoordinate cursor)
     {

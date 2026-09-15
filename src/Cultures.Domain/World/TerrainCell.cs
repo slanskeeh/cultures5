@@ -1,22 +1,29 @@
+using Cultures.Core.Ids;
+
 namespace Cultures.World;
 
 /// <summary>
-/// Generic occupancy token. Future building/character systems should replace this
-/// with typed IDs rather than storing occupancy on sprites.
+/// Dynamic overlay token. Terrain stays separate; this is not an entity manager.
 /// </summary>
 public enum OccupantKind : byte
 {
     None = 0,
-    DebugMarker = 1
+    DebugMarker = 1,
+    Building = 2
 }
 
-public readonly record struct Occupancy(OccupantKind Kind)
+public readonly record struct Occupancy(OccupantKind Kind, ulong EntityValue = 0, bool BlocksMovement = false)
 {
     public static Occupancy Empty { get; } = new(OccupantKind.None);
-    public static Occupancy DebugMarker { get; } = new(OccupantKind.DebugMarker);
+    public static Occupancy DebugMarker { get; } = new(OccupantKind.DebugMarker, 0, true);
+
+    public static Occupancy ForBuilding(BuildingId id, bool blocksMovement) =>
+        new(OccupantKind.Building, id.Value, blocksMovement);
+
+    public BuildingId BuildingId => Kind == OccupantKind.Building ? new BuildingId(EntityValue) : BuildingId.None;
 
     public bool IsOccupied => Kind != OccupantKind.None;
-    public override string ToString() => Kind.ToString();
+    public override string ToString() => Kind == OccupantKind.Building ? $"Building:{EntityValue}" : Kind.ToString();
 }
 
 /// <summary>

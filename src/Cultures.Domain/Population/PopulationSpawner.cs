@@ -26,11 +26,10 @@ public static class PopulationSpawner
 
         for (var i = 0; i < count; i++)
         {
-            var cell = i == 0 ? origin : NextLandCell(world, navigator, origin, i, used);
-            var character = new CharacterState(ids.NextCharacter(), cell, seed ^ (ulong)(i + 1) * 0x9E3779B97F4A7C15UL)
-            {
-                WorkCell = origin
-            };
+            var cell = i == 0 && navigator.IsPassable(origin)
+                ? origin
+                : NextLandCell(world, navigator, origin, i, used);
+            var character = new CharacterState(ids.NextCharacter(), cell, seed ^ (ulong)(i + 1) * 0x9E3779B97F4A7C15UL);
             roster.Add(character);
             used.Add(cell);
         }
@@ -44,7 +43,7 @@ public static class PopulationSpawner
         for (var x = 0; x < world.Configuration.Width; x++)
         {
             var cell = new LogicalGridCoordinate(x, y);
-            if (world.Grid.GetCell(cell).Passable)
+            if (IsSpawnable(world, cell))
                 return cell;
         }
 
@@ -53,12 +52,18 @@ public static class PopulationSpawner
             for (var x = 0; x < world.Configuration.Width; x++)
             {
                 var cell = new LogicalGridCoordinate(x, y2);
-                if (world.Grid.GetCell(cell).Passable)
+                if (IsSpawnable(world, cell))
                     return cell;
             }
         }
 
         throw new InvalidOperationException("No passable land cell found for population spawn.");
+    }
+
+    private static bool IsSpawnable(LogicalWorld world, LogicalGridCoordinate cell)
+    {
+        var terrain = world.Grid.GetCell(cell);
+        return terrain.Generated.Passable && !terrain.Occupancy.BlocksMovement;
     }
 
     private static LogicalGridCoordinate NextLandCell(
@@ -71,13 +76,22 @@ public static class PopulationSpawner
         var dx = (index % 5) - 2;
         var dy = (index / 5) % 5 - 2;
         var candidate = world.Topology.Resolve(origin.X + dx, origin.Y + dy);
-        if (candidate.TryGetCell(out var cell) && world.Grid.GetCell(cell).Passable && used.Add(cell))
+        if (candidate.TryGetCell(out var cell) && navigator.IsPassable(cell) && used.Add(cell))
             return cell;
 
         foreach (var neighbor in navigator.PassableNeighbors(origin))
         {
             if (used.Add(neighbor))
                 return neighbor;
+        }
+
+        foreach (var neighbor in navigator.PassableNeighbors(origin))
+        {
+            foreach (var next in navigator.PassableNeighbors(neighbor))
+            {
+                if (used.Add(next))
+                    return next;
+            }
         }
 
         return origin;

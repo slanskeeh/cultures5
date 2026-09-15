@@ -1,4 +1,5 @@
 using Cultures.Application.Persistence;
+using Cultures.Buildings;
 using Cultures.Core.Commands;
 using Cultures.Core.Events;
 using Cultures.Core.Ids;
@@ -20,7 +21,8 @@ public sealed class SimulationHost
         SimulationCalendar? calendar = null,
         ulong initialTick = 0,
         WorldConfiguration? world = null,
-        int populationCount = CharacterRules.DefaultPopulation)
+        int populationCount = CharacterRules.DefaultPopulation,
+        bool placeDevelopmentBuildings = true)
     {
         WorldSeed = worldSeed;
         Clock = new SimulationClock(calendar, initialTick);
@@ -34,12 +36,28 @@ public sealed class SimulationHost
             Events,
             () => Clock.Tick,
             new LogicalGridCoordinate(0, World.Configuration.Height / 2));
+        Buildings = new BuildingDirectory();
+        Catalog = BuildingCatalog.Development;
+        Recipes = RecipeCatalog.Development;
+        Placement = new BuildingPlacementSystem(World, Buildings, Catalog, Ids);
+        Production = new ProductionSystem(
+            World,
+            Buildings,
+            new ProductionResolver(Recipes, new NeutralEnvironmentProductionModifier()),
+            Events,
+            Clock);
+
+        if (placeDevelopmentBuildings)
+            DevelopmentSiteBootstrap.Place(Placement, World);
+
         Population = PopulationSpawner.Spawn(World, Ids, worldSeed, populationCount);
-        Characters = new CharacterSimulation(World, Population, Clock, Events);
+        Characters = new CharacterSimulation(World, Population, Clock, Events, Production);
 
         Commands.Register(new PingCommandHandler());
         Commands.Register(new MoveDebugCursorHandler(Cursor));
         Commands.Register(new SetOccupancyHandler(World));
+        Commands.Register(new PlaceBuildingHandler(Placement, Events, Clock));
+        Commands.Register(new RemoveBuildingHandler(Placement, Production, Events, Clock));
     }
 
     public ulong WorldSeed { get; }
@@ -50,6 +68,11 @@ public sealed class SimulationHost
     public EntityIdFactory Ids { get; }
     public LogicalWorld World { get; }
     public SimulationCursor Cursor { get; }
+    public BuildingDirectory Buildings { get; }
+    public BuildingCatalog Catalog { get; }
+    public RecipeCatalog Recipes { get; }
+    public BuildingPlacementSystem Placement { get; }
+    public ProductionSystem Production { get; }
     public PopulationRoster Population { get; }
     public CharacterSimulation Characters { get; }
 

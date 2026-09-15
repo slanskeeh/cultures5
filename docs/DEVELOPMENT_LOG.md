@@ -376,6 +376,92 @@ Phase 4 — Buildings and Production. Do not start automatically.
 ### 12. Notes for ChatGPT
 - Ignore any older instruction to keep a root `DEVELOPMENT_LOG.md`.
 
+---
+
+## [2026-09-15] — Task: Phase 4 Buildings and Production
+
+### 1. Task
+Implement Phase 4 from `docs/prompts/PHASE_4_PROMPT.md`: buildings, occupancy, generic resources, data-driven production, workplaces, storage/consumption, shelter rest, debug presentation. Not a settlement. No construction economy, biome catalogue, seasons, or skills.
+
+### 2. Done
+- `BuildingId` / `BuildingDefinition` / `BuildingState` / footprint / lifecycle.
+- Placement commands, occupancy overlay with `BuildingId`, removal clears cells.
+- `ResourceType` + integer `Inventory`; recipes via `ProductionRecipe` + `ProductionResolver`.
+- `NeutralEnvironmentProductionModifier` (1.0x) as the environment seam.
+- Workplaces with access cells; characters `AssignedWorkplace`.
+- Production routes to storage; eat from storage; sleep at shelter.
+- Bootstrap: storage, shelter, 2 farms, workshop (not a settlement).
+- Debug letters F/S/H/W, HUD inspect, B/V building cycle.
+- AD-036..AD-044; AD-034/035 and OD-012 superseded.
+
+### 3. Working / Verified
+- 110/110 tests pass, including Phases 0–3.
+- Build: 0 warnings / 0 errors.
+- Headless Godot Main `--quit-after 45` exit 0.
+- Determinism: two hosts seed 1, 240 and 480 ticks, matching character and building snapshots.
+- Building/character markers in a visible Godot window were **not** interactively inspected.
+
+### 4. Tests
+- `dotnet test tests/Cultures.Tests/Cultures.Tests.csproj` — PASS 110 passed, 0 failed, 0 skipped
+- `dotnet build Cultures.sln` — PASS, 0 warnings, 0 errors
+- Godot 4.7.2.stable.mono headless `--quit-after 45` — PASS (exit 0)
+
+### 5. Bugs found
+- `CharacterRules.StartingFood` const 0 made constructor `if (StartingFood > 0)` unreachable (CS0162).
+
+### 6. Bugs fixed
+- Symptom: warning CS0162 in `CharacterState`.
+- Cause: compile-time constant folded the food seed branch.
+- Solution: personal inventory starts empty; food comes from production.
+- Regression: full solution build 0 warnings.
+
+### 7. Known limitations / TODO
+- Construction is instant Active (AD-041). No hauling.
+- Environment modifier is always 1.0x; no biome-specific outputs.
+- Worker skill is accepted but unused.
+- Characters still do not occupy cells.
+- Buildings/characters still not in the save envelope (version remains 2).
+- Development site is not a settlement.
+- Pathfinder still local BFS.
+- Visible Godot interaction not verified.
+
+### 8. Architecture decisions
+- AD-036 definition vs instance
+- AD-037 occupancy overlay + BuildingId
+- AD-038 integer inventory
+- AD-039 recipes + neutral environment seam
+- AD-040 workplaces / access cells
+- AD-041 instant construction
+- AD-042 development site bootstrap
+- AD-043 buildings block movement
+- AD-044 food from storage, sleep at shelter
+
+### 9. Files changed
+- `src/Cultures.Domain/Economy/**`
+- `src/Cultures.Domain/Buildings/**`
+- `src/Cultures.Domain/World/TerrainCell.cs`
+- `src/Cultures.Domain/Population/**`
+- `src/Cultures.Domain/Application/SimulationHost.cs`
+- `presentation/Main.cs`, `WorldDebugMap.cs`, `Main.tscn`
+- `tests/Cultures.Tests/BuildingProductionTests.cs`, `CharacterSimulationTests.cs`, `TestProduction.cs`
+- `docs/DECISIONS.md`, `docs/MVP_ROADMAP.md`, `docs/SIMULATION_ARCHITECTURE.md`, `docs/DEVELOPMENT_LOG.md`
+
+### 10. Current project health
+- Build: working
+- Tests: 110/110 passing
+- Runtime: headless Main boots
+- Known broken areas: none identified; building/character motion not GUI-verified
+
+### 11. Next step
+Phase 5 — Families and Skills. Do not start automatically.
+
+### 12. Notes for ChatGPT
+- Review whether access-cell workplaces (stand beside a blocking footprint) is the right doorless model.
+- Neutral 1.0x modifier must stay a seam, not a permanent “environment does nothing” rule.
+- Instant construction and the 5-building bootstrap are temporary.
+- Save still reconstructs terrain only; dynamic buildings/characters need a future envelope version.
+
+
 
 
 
