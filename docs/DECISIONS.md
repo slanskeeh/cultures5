@@ -592,6 +592,69 @@ This distinction becomes increasingly important as families, personalities, skil
 
 ---
 
+## AD-051 — Family is parent/child IDs, not a FamilyManager
+
+Status: Accepted
+
+Parent and child links are stored on `FamilyLinks` using `CharacterId`. Siblings and grandparents are queries. `FamilyId` remains a future household identity and is not required for genealogy.
+
+Reason:
+Phase 5 needs persistent generations without a god-object or a forced household.
+
+## AD-052 — Skills belong to the character
+
+Status: Accepted
+
+`CharacterSkills` uses integer experience (`Level = XP / XpPerLevel`). Skills are not subclasses, buildings, or professions. Phase 5 catalogue: Farming, Woodworking, Stoneworking, Crafting.
+
+Reason:
+A person keeps knowledge when they change workplace. Integer XP avoids long-term float drift.
+
+## AD-053 — Inheritance and teaching are separate
+
+Status: Accepted
+
+Inheritance runs once at birth from the best parent level, scaled by `InheritancePermille`. Teaching is a timed `Teach`/`Learn` activity that adds XP during life. Parenthood may bonus teaching XP but is not the only teaching path.
+
+Reason:
+The prompt forbids merging the two mechanisms or copying a parent's full skill.
+
+## AD-054 — Teaching is an activity and a command
+
+Status: Accepted
+
+Autonomous parent/child teaching and `TeachCharacterCommand` start the same `TeachingSystem` activity. UI must not add skill XP directly.
+
+Reason:
+Preserves AD-045 player-command architecture and one activity pipeline.
+
+## AD-055 — Worker skill modifies production through the resolver
+
+Status: Accepted
+
+`ProductionRecipe.Skill` names the relevant character skill. `ProductionResolver` shortens duration at higher skill and adds a bonus output at `BonusOutputLevel`. No per-building resolver subclasses.
+
+Reason:
+Worker must be able to affect output without FarmProductionResolver chains.
+
+## AD-056 — Children cannot take workplaces
+
+Status: Accepted
+
+`SkillRules.CanWork` is adult/elder only. Children may move, eat, sleep and learn.
+
+Reason:
+Children exist for family and learning, not as default farm labor.
+
+## AD-057 — Birth is an explicit bounded command
+
+Status: Accepted (temporary)
+
+`CreateChildCommand` / `CharacterCreation` creates a child with a new `CharacterId`. Population is capped (`MaxPopulation`, `MaxChildrenPerParent`). No romance/pregnancy simulation.
+
+Reason:
+Need a deterministic birth seam without uncontrolled growth.
+
 ## OD-014 — Exact command queue and interruption rules
 
 **Status:** Open
@@ -608,3 +671,12 @@ Examples requiring future design:
 * whether repeated commands become a routine;
 * how long autonomous AI remains suppressed;
 * how commands behave when their target disappears.
+
+### OD-015 — Exact skill curve and rates
+Not fixed. XP per work/teach, inheritance permille, and the production bonus threshold are provisional (`SkillRules`).
+
+### OD-016 — Reproduction, marriage, and fertility
+Not fixed. Phase 5 birth is a debug/command mechanism with a population cap.
+
+### OD-017 — Household versus genealogy
+`FamilyLinks` are parent/child IDs. `FamilyId` is unused. Whether a household identity is separate from genealogy remains open.

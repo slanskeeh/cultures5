@@ -274,7 +274,7 @@ public sealed class ProductionAndWorkplaceTests
     public void No_food_means_eating_cannot_occur()
     {
         var world = new LogicalWorld(WorldConfiguration.DebugSample, 1);
-        var decisions = new CharacterDecisionSystem(new GridNavigator(world), TestProduction.ForWorld(world));
+        var decisions = new CharacterDecisionSystem(new GridNavigator(world), TestProduction.ForWorld(world), TestProduction.Teaching(world));
         var character = new CharacterState(new CharacterId(1), new LogicalGridCoordinate(0, 0), 1);
         character.Needs.Hunger = 0.95f;
         Assert.NotEqual(ActionKind.Eat, decisions.ChooseKind(character));

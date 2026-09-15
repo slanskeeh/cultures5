@@ -162,16 +162,11 @@ Skills increase through:
 
 Parents may transmit familiarity but not full mastery.
 
+Phase 5 stores integer skill experience on the character. Work and teaching add XP; birth inheritance is a small one-time contribution. Skills are not professions.
+
 ## 9. Families
 
-FamilyState contains:
-- members;
-- lineage;
-- culture;
-- reputation;
-- history.
-
-Family relationships must be represented by stable IDs.
+Phase 5 represents genealogy as parent/child `CharacterId` links and queries (siblings, grandparents). A full `FamilyState` (name, reputation, household) is future work. `FamilyId` is reserved and unused.
 
 ## 10. Buildings
 

@@ -461,6 +461,87 @@ Phase 5 — Families and Skills. Do not start automatically.
 - Instant construction and the 5-building bootstrap are temporary.
 - Save still reconstructs terrain only; dynamic buildings/characters need a future envelope version.
 
+---
+
+## [2026-09-16] — Task: Phase 5 Families and Skills
+
+### 1. Task
+Implement Phase 5 from `docs/prompts/PHASE_5_PROMPT.md`: persistent parent/child relationships, children, generic skills, work progression, production skill effect, inheritance vs teaching, teaching activity + player command. No professions, personality, politics, or settlements.
+
+### 2. Done
+- `FamilyLinks` / `FamilyQueries`; `CharacterCreation` with population/child caps.
+- `CharacterSkills` integer XP; Farming/Woodworking/Stoneworking/Crafting.
+- Adults seed starting skills from appearance seed; children inherit a small parent contribution.
+- Children cannot take workplaces; Teach/Learn activities; autonomous parent↔child teaching (local links only).
+- `TeachCharacterCommand`, `CreateChildCommand`, `AddSkillExperienceCommand`.
+- Production resolver uses recipe skill + worker level.
+- Debug HUD family/skills; N birth, T teach, K grant farming XP.
+- AD-051..AD-057, OD-015..OD-017.
+
+### 3. Working / Verified
+- 125/125 tests pass, including Phases 0–4.
+- Build: 0 warnings / 0 errors.
+- Headless Godot Main `--quit-after 45` exit 0.
+- Determinism: matching hosts for birth, inheritance, teaching, and existing 240-tick snapshots.
+- Family/skill HUD in a visible Godot window was **not** interactively inspected.
+
+### 4. Tests
+- `dotnet test tests/Cultures.Tests/Cultures.Tests.csproj` — PASS 125 passed, 0 failed, 0 skipped
+- `dotnet build Cultures.sln` — PASS, 0 warnings, 0 errors
+- Godot 4.7.2.stable.mono headless `--quit-after 45` — PASS (exit 0)
+
+### 5. Bugs found
+- `TeachingSystem.TryBestSkill` out parameters uninitialized.
+- `CharacterActionSystem`/`CharacterDecisionSystem` missing `using Cultures.Core.Ids`.
+
+### 6. Bugs fixed
+- Symptom: CS0177 / CS0246 compile failures.
+- Cause: incomplete method body after a patch; missing usings after `CharacterId` appeared in signatures.
+- Solution: initialize out params; add usings.
+- Regression: solution build 0 warnings.
+
+### 7. Known limitations / TODO
+- Birth is command/debug only; no marriage/pregnancy (OD-016).
+- Skill curve and rates are provisional (OD-015).
+- `FamilyId` unused (OD-017).
+- No profession or personality system.
+- Autonomous teaching only walks parent/child links, not schools/apprentices.
+- Characters/families still not persisted in save envelope v2.
+- Visible Godot interaction not verified.
+
+### 8. Architecture decisions
+- AD-051 genealogy links
+- AD-052 character-owned integer skills
+- AD-053 inheritance ≠ teaching
+- AD-054 teaching activity + command
+- AD-055 skill via production resolver
+- AD-056 children cannot work
+- AD-057 bounded birth command
+
+### 9. Files changed
+- `src/Cultures.Domain/Population/**` (skills, family, teaching, creation, commands)
+- `src/Cultures.Domain/Buildings/ProductionRecipe.cs`, `RecipeCatalog.cs`, `ProductionResolver.cs`, `ProductionSystem.cs`
+- `src/Cultures.Domain/Application/SimulationHost.cs`
+- `presentation/Main.cs`, `Main.tscn`
+- `tests/Cultures.Tests/FamilySkillTests.cs` and constructor updates
+- `docs/DECISIONS.md`, `docs/MVP_ROADMAP.md`, `docs/SIMULATION_ARCHITECTURE.md`, `docs/DEVELOPMENT_LOG.md`
+
+### 10. Current project health
+- Build: working
+- Tests: 125/125 passing
+- Runtime: headless Main boots
+- Known broken areas: none identified; family/skill UI not GUI-verified
+
+### 11. Next step
+Phase 6 — Emergent Settlements. Do not start automatically.
+
+### 12. Notes for ChatGPT
+- Review whether newborn age 6 and work unlock at 16 are acceptable placeholders.
+- Production bonus at skill 50 is a coarse step, not a curve.
+- Player teaching command currently moves then teaches; queue/interrupt vs hunger is still OD-014.
+- Do not treat `FamilyId.None` as an implemented household.
+
+
 
 
 

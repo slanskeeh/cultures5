@@ -15,19 +15,21 @@ public sealed class CharacterSimulation
         PopulationRoster population,
         SimulationClock clock,
         EventBus events,
-        ProductionSystem production)
+        ProductionSystem production,
+        TeachingSystem teaching)
     {
         World = world ?? throw new ArgumentNullException(nameof(world));
         Population = population ?? throw new ArgumentNullException(nameof(population));
         Clock = clock ?? throw new ArgumentNullException(nameof(clock));
         Events = events ?? throw new ArgumentNullException(nameof(events));
         Production = production ?? throw new ArgumentNullException(nameof(production));
+        Teaching = teaching ?? throw new ArgumentNullException(nameof(teaching));
         Navigator = new GridNavigator(world);
         Aging = new CharacterAgingSystem(clock.Calendar);
         Needs = new CharacterNeedsSystem(clock.Calendar);
         Survival = new CharacterSurvivalSystem(clock.Calendar);
-        Actions = new CharacterActionSystem(Navigator, production);
-        Decisions = new CharacterDecisionSystem(Navigator, production);
+        Actions = new CharacterActionSystem(Navigator, production, teaching);
+        Decisions = new CharacterDecisionSystem(Navigator, production, teaching);
     }
 
     public LogicalWorld World { get; }
@@ -35,6 +37,7 @@ public sealed class CharacterSimulation
     public SimulationClock Clock { get; }
     public EventBus Events { get; }
     public ProductionSystem Production { get; }
+    public TeachingSystem Teaching { get; }
     public GridNavigator Navigator { get; }
     public CharacterAgingSystem Aging { get; }
     public CharacterNeedsSystem Needs { get; }
@@ -56,6 +59,7 @@ public sealed class CharacterSimulation
             {
                 Events.Publish(new CharacterDiedEvent(Clock.Tick, character.Id, character.Position));
                 Production.ReleaseWorkplace(character);
+                Teaching.Abandon(character);
                 continue;
             }
 

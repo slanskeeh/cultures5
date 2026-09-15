@@ -1,4 +1,5 @@
 using Cultures.Economy;
+using Cultures.Population;
 
 namespace Cultures.Buildings;
 
@@ -11,7 +12,8 @@ public sealed class ProductionRecipe
         RecipeId id,
         int durationTicks,
         IReadOnlyList<ResourceStack>? inputs = null,
-        IReadOnlyList<ResourceStack>? outputs = null)
+        IReadOnlyList<ResourceStack>? outputs = null,
+        SkillType? skill = null)
     {
         if (durationTicks <= 0)
             throw new ArgumentOutOfRangeException(nameof(durationTicks));
@@ -20,12 +22,14 @@ public sealed class ProductionRecipe
         DurationTicks = durationTicks;
         Inputs = inputs ?? Array.Empty<ResourceStack>();
         Outputs = outputs ?? Array.Empty<ResourceStack>();
+        Skill = skill;
     }
 
     public RecipeId Id { get; }
     public int DurationTicks { get; }
     public IReadOnlyList<ResourceStack> Inputs { get; }
     public IReadOnlyList<ResourceStack> Outputs { get; }
+    public SkillType? Skill { get; }
 
     public bool CanExecute(Inventory inventory)
     {

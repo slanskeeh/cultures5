@@ -51,13 +51,18 @@ public sealed class SimulationHost
             DevelopmentSiteBootstrap.Place(Placement, World);
 
         Population = PopulationSpawner.Spawn(World, Ids, worldSeed, populationCount);
-        Characters = new CharacterSimulation(World, Population, Clock, Events, Production);
+        Teaching = new TeachingSystem(Population, World, Events, Clock);
+        Creation = new CharacterCreation(Population, Ids, World, Events, Clock);
+        Characters = new CharacterSimulation(World, Population, Clock, Events, Production, Teaching);
 
         Commands.Register(new PingCommandHandler());
         Commands.Register(new MoveDebugCursorHandler(Cursor));
         Commands.Register(new SetOccupancyHandler(World));
         Commands.Register(new PlaceBuildingHandler(Placement, Events, Clock));
         Commands.Register(new RemoveBuildingHandler(Placement, Production, Events, Clock));
+        Commands.Register(new TeachCharacterHandler(Population, Teaching, Characters.Navigator));
+        Commands.Register(new CreateChildHandler(Creation));
+        Commands.Register(new AddSkillExperienceHandler(Population));
     }
 
     public ulong WorldSeed { get; }
@@ -73,6 +78,8 @@ public sealed class SimulationHost
     public RecipeCatalog Recipes { get; }
     public BuildingPlacementSystem Placement { get; }
     public ProductionSystem Production { get; }
+    public TeachingSystem Teaching { get; }
+    public CharacterCreation Creation { get; }
     public PopulationRoster Population { get; }
     public CharacterSimulation Characters { get; }
 

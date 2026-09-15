@@ -54,7 +54,6 @@ public sealed class ProductionResolver
         CharacterState? worker,
         out ProductionEvaluation evaluation)
     {
-        _ = worker;
         evaluation = default;
         if (building.Definition.Recipe is not { } recipeId)
             return false;
@@ -62,12 +61,23 @@ public sealed class ProductionResolver
             return false;
 
         var modifier = Environment.Evaluate(building, terrain, recipe);
-        var duration = Math.Max(1, (int)MathF.Round(recipe.DurationTicks * modifier.DurationScale));
+        var skillLevel = 0;
+        if (recipe.Skill is { } skill && worker is not null)
+            skillLevel = worker.Skills.GetLevel(skill);
+
+        var durationHundredths = Math.Clamp(120 - skillLevel / 5, 80, 140);
+        var duration = Math.Max(
+            1,
+            (int)MathF.Round(recipe.DurationTicks * modifier.DurationScale * durationHundredths / 100f));
         var outputs = new ResourceStack[recipe.Outputs.Count];
         for (var i = 0; i < recipe.Outputs.Count; i++)
         {
             var raw = recipe.Outputs[i];
             var quantity = Math.Max(0, (int)MathF.Round(raw.Quantity * modifier.OutputScale));
+            if (skillLevel >= SkillRules.BonusOutputLevel)
+                quantity++;
+            if (quantity <= 0 && raw.Quantity > 0)
+                quantity = 1;
             outputs[i] = new ResourceStack(raw.Type, quantity);
         }
 

@@ -2,6 +2,7 @@ using Cultures.Application;
 using Cultures.Buildings;
 using Cultures.Core.Events;
 using Cultures.Core.Time;
+using Cultures.Population;
 using Cultures.World;
 
 namespace Cultures.Tests;
@@ -18,4 +19,7 @@ internal static class TestProduction
             new EventBus(),
             new SimulationClock());
     }
+
+    public static TeachingSystem Teaching(LogicalWorld world, PopulationRoster? population = null) =>
+        new(population ?? new PopulationRoster(), world, new EventBus(), new SimulationClock());
 }

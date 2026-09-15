@@ -1,4 +1,5 @@
 using Cultures.Buildings;
+using Cultures.Core.Ids;
 using Cultures.Economy;
 using Cultures.World;
 
@@ -6,18 +7,23 @@ namespace Cultures.Population;
 
 /// <summary>
 /// Deterministic priority selector. Starting rule, not final AI.
-/// Hunger → food; fatigue → shelter; otherwise workplace.
+/// Hunger → food; fatigue → shelter; work if adult; else localized teaching.
 /// </summary>
 public sealed class CharacterDecisionSystem
 {
-    public CharacterDecisionSystem(GridNavigator navigator, ProductionSystem production)
+    public CharacterDecisionSystem(
+        GridNavigator navigator,
+        ProductionSystem production,
+        TeachingSystem teaching)
     {
         Navigator = navigator ?? throw new ArgumentNullException(nameof(navigator));
         Production = production ?? throw new ArgumentNullException(nameof(production));
+        Teaching = teaching ?? throw new ArgumentNullException(nameof(teaching));
     }
 
     public GridNavigator Navigator { get; }
     public ProductionSystem Production { get; }
+    public TeachingSystem Teaching { get; }
 
     public ActionKind ChooseKind(CharacterState character)
     {
@@ -66,8 +72,13 @@ public sealed class CharacterDecisionSystem
         if (!character.Activity.NeedsDecision && !ShouldInterrupt(character))
             return;
 
-        if (ShouldInterrupt(character) && character.Activity.Kind == ActionKind.Work)
-            Production.AbandonWork(character);
+        if (ShouldInterrupt(character))
+        {
+            if (character.Activity.Kind is ActionKind.Work)
+                Production.AbandonWork(character);
+            if (character.Activity.Kind is ActionKind.Teach or ActionKind.Learn)
+                Teaching.Abandon(character);
+        }
 
         var kind = ChooseKind(character);
         switch (kind)
@@ -89,12 +100,33 @@ public sealed class CharacterDecisionSystem
                 BeginMoveToNeed(character);
                 break;
             case ActionKind.Idle:
-                character.Activity.Start(ActionKind.Idle, CharacterRules.IdleDurationTicks);
+                if (!TryBeginTeachingOrMove(character))
+                    character.Activity.Start(ActionKind.Idle, CharacterRules.IdleDurationTicks);
                 break;
             default:
                 character.Activity.Cancel();
                 break;
         }
+    }
+
+    private bool TryBeginTeachingOrMove(CharacterState character)
+    {
+        var intent = Teaching.ConsiderAutonomous(character);
+        if (intent is null)
+            return false;
+
+        if (!Teaching.Population.TryGet(intent.Value.Partner, out var partner))
+            return false;
+
+        if (intent.Value.Kind is ActionKind.Teach or ActionKind.Learn)
+        {
+            var teacher = intent.Value.Kind == ActionKind.Teach ? character : partner;
+            var student = intent.Value.Kind == ActionKind.Teach ? partner : character;
+            return Teaching.TryBegin(teacher, student, intent.Value.Skill, interrupt: false, out _);
+        }
+
+        BeginMove(character, intent.Value.Target, intent.Value.Partner, intent.Value.Skill);
+        return true;
     }
 
     private bool ShouldInterrupt(CharacterState character)
@@ -176,11 +208,15 @@ public sealed class CharacterDecisionSystem
         BeginMove(character, target.Value);
     }
 
-    private void BeginMove(CharacterState character, LogicalGridCoordinate target)
+    private void BeginMove(
+        CharacterState character,
+        LogicalGridCoordinate target,
+        CharacterId partner = default,
+        SkillType? skill = null)
     {
         if (character.Position.Equals(target))
         {
-            character.Activity.Start(ActionKind.Idle, CharacterRules.IdleDurationTicks);
+            character.Activity.Start(ActionKind.Idle, CharacterRules.IdleDurationTicks, target, partner, skill);
             return;
         }
 
@@ -191,7 +227,7 @@ public sealed class CharacterDecisionSystem
             return;
         }
 
-        character.Activity.Start(ActionKind.Move, path.Count, target);
+        character.Activity.Start(ActionKind.Move, path.Count, target, partner, skill);
         foreach (var step in path)
             character.Activity.RemainingPath.Enqueue(step);
     }

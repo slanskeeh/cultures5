@@ -101,22 +101,23 @@ Exit criteria: autonomous food/material loop, occupancy/wrap tests, determinism.
 
 ## Phase 5 — Families and Skills
 
-Status: NEXT
+Status: COMPLETED
 
-Goals:
-- families;
-- children;
-- aging;
-- skills;
-- professions;
-- teaching;
-- skill inheritance/familiarity;
-- family history.
+Delivered:
+- parent/child `FamilyLinks` and queries;
+- bounded `CreateChildCommand`;
+- child/adult work restriction;
+- generic integer skills;
+- work XP and production skill modifier;
+- Teach/Learn activity + `TeachCharacterCommand`;
+- small birth inheritance, separate from teaching;
+- debug inspect + N/T/K commands.
 
-Exit criteria:
-At least one generation transition works and is persisted.
+Professions, personality, marriage, and family history signs were intentionally not implemented.
 
 ## Phase 6 — Emergent Settlements
+
+Status: NEXT
 
 Goals:
 - population clustering;

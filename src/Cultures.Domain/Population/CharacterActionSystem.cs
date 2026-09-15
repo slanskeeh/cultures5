@@ -1,4 +1,5 @@
 using Cultures.Buildings;
+using Cultures.Core.Ids;
 using Cultures.Economy;
 using Cultures.World;
 
@@ -6,14 +7,16 @@ namespace Cultures.Population;
 
 public sealed class CharacterActionSystem
 {
-    public CharacterActionSystem(GridNavigator navigator, ProductionSystem production)
+    public CharacterActionSystem(GridNavigator navigator, ProductionSystem production, TeachingSystem teaching)
     {
         Navigator = navigator ?? throw new ArgumentNullException(nameof(navigator));
         Production = production ?? throw new ArgumentNullException(nameof(production));
+        Teaching = teaching ?? throw new ArgumentNullException(nameof(teaching));
     }
 
     public GridNavigator Navigator { get; }
     public ProductionSystem Production { get; }
+    public TeachingSystem Teaching { get; }
 
     public void Advance(CharacterState character)
     {
@@ -38,8 +41,15 @@ public sealed class CharacterActionSystem
                 break;
         }
 
-        if (character.Activity.IsComplete)
-            Complete(character);
+        if (!character.Activity.IsComplete)
+            return;
+
+        var partner = character.Activity.PartnerId;
+        var skill = character.Activity.Skill;
+        var kind = character.Activity.Kind;
+        Complete(character);
+        if (kind == ActionKind.Move && skill is { } teachSkill && partner.IsAssigned)
+            TryBeginAfterMove(character, partner, teachSkill);
     }
 
     private void AdvanceMove(CharacterState character)
@@ -89,9 +99,21 @@ public sealed class CharacterActionSystem
             case ActionKind.Work:
                 Production.TryCompleteWork(character);
                 break;
+            case ActionKind.Teach:
+                Teaching.Complete(character);
+                break;
         }
 
         character.Activity.Cancel();
+    }
+
+    private void TryBeginAfterMove(CharacterState character, CharacterId partnerId, SkillType skill)
+    {
+        if (!Teaching.Population.TryGet(partnerId, out var partner))
+            return;
+        if (Teaching.TryBegin(character, partner, skill, interrupt: true, out _))
+            return;
+        Teaching.TryBegin(partner, character, skill, interrupt: true, out _);
     }
 
     private void TryTakeFood(CharacterState character)

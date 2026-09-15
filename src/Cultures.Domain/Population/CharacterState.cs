@@ -6,8 +6,8 @@ using Cultures.World;
 namespace Cultures.Population;
 
 /// <summary>
-/// Authoritative character. Composed of identity, body, needs, inventory and activity.
-/// Family/skills/politics are extension points, not implemented here.
+/// Authoritative character. Skills and family links belong to the person, not a workplace.
+/// Personality/profession remain future extension points (AppearanceSeed).
 /// </summary>
 public sealed class CharacterState
 {
@@ -26,7 +26,7 @@ public sealed class CharacterState
     }
 
     public CharacterId Id { get; }
-    public string Name { get; }
+    public string Name { get; set; }
     public ulong AppearanceSeed { get; }
     public double AgeYears { get; set; }
     public CharacterLifeStage LifeStage { get; set; }
@@ -34,6 +34,8 @@ public sealed class CharacterState
     public CharacterNeeds Needs { get; } = new();
     public CharacterHealth Health { get; } = new();
     public Inventory Inventory { get; } = new(CharacterRules.PersonalInventoryCapacity);
+    public CharacterSkills Skills { get; } = new();
+    public FamilyLinks FamilyLinks { get; } = new();
     public CharacterActivity Activity { get; } = new();
     public WorkplaceId AssignedWorkplace { get; set; }
     public FamilyId Family { get; set; }
@@ -52,7 +54,14 @@ public sealed class CharacterState
         Activity.Kind,
         Activity.ProgressTicks,
         AssignedWorkplace.Building.Value,
-        AssignedWorkplace.Slot);
+        AssignedWorkplace.Slot,
+        Skills.GetLevel(SkillType.Farming),
+        Skills.GetLevel(SkillType.Woodworking),
+        Skills.GetLevel(SkillType.Stoneworking),
+        Skills.GetLevel(SkillType.Crafting),
+        FamilyLinks.Parents.Count > 0 ? FamilyLinks.Parents[0].Value : 0UL,
+        FamilyLinks.Parents.Count > 1 ? FamilyLinks.Parents[1].Value : 0UL,
+        FamilyLinks.Children.Count);
 }
 
 public readonly record struct CharacterSnapshot(
@@ -67,4 +76,11 @@ public readonly record struct CharacterSnapshot(
     ActionKind Action,
     int ActionProgress,
     ulong WorkplaceBuilding,
-    int WorkplaceSlot);
+    int WorkplaceSlot,
+    int Farming,
+    int Woodworking,
+    int Stoneworking,
+    int Crafting,
+    ulong ParentA,
+    ulong ParentB,
+    int ChildCount);

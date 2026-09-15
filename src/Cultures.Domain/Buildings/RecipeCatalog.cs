@@ -1,4 +1,5 @@
 using Cultures.Economy;
+using Cultures.Population;
 
 namespace Cultures.Buildings;
 
@@ -29,10 +30,12 @@ public sealed class RecipeCatalog
         new ProductionRecipe(
             RecipeId.FarmFood,
             durationTicks: 24,
-            outputs: [new ResourceStack(ResourceType.Food, 1)]),
+            outputs: [new ResourceStack(ResourceType.Food, 1)],
+            skill: SkillType.Farming),
         new ProductionRecipe(
             RecipeId.WorkshopWood,
             durationTicks: 20,
-            outputs: [new ResourceStack(ResourceType.Wood, 1)])
+            outputs: [new ResourceStack(ResourceType.Wood, 1)],
+            skill: SkillType.Woodworking)
     ]);
 }

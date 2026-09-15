@@ -74,6 +74,16 @@ public sealed class ProductionSystem
         if (!recipe.TryExecute(building.Inventory, evaluation.Outputs))
             return false;
 
+        if (recipe.Skill is { } skill)
+        {
+            var previous = worker.Skills.GetLevel(skill);
+            if (worker.Skills.TryAddExperience(skill, SkillRules.WorkXpPerCompletion, out var newLevel)
+                && newLevel > previous)
+            {
+                Events.Publish(new SkillImprovedEvent(Clock.Tick, worker.Id, skill, newLevel));
+            }
+        }
+
         RouteToStorage(building);
         building.Production.Clear();
         Events.Publish(new ResourceProducedEvent(Clock.Tick, building.Id, evaluation.Recipe));
@@ -123,6 +133,8 @@ public sealed class ProductionSystem
 
     public WorkplaceId? FindFreeWorkplace(CharacterState character)
     {
+        if (!SkillRules.CanWork(character))
+            return null;
         if (character.AssignedWorkplace.IsAssigned
             && Buildings.TryGet(character.AssignedWorkplace.Building, out var assigned)
             && assigned.IsActive

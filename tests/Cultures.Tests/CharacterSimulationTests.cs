@@ -55,7 +55,7 @@ public sealed class CharacterNeedsAndSurvivalTests
     public void Eating_decreases_hunger_and_consumes_food()
     {
         var world = new LogicalWorld(WorldConfiguration.DebugSample, 1);
-        var actions = new CharacterActionSystem(new GridNavigator(world), TestProduction.ForWorld(world));
+        var actions = new CharacterActionSystem(new GridNavigator(world), TestProduction.ForWorld(world), TestProduction.Teaching(world));
         var character = Adult();
         character.Needs.Hunger = 0.9f;
         Assert.True(character.Inventory.TryAdd(ResourceType.Food, 1));
@@ -73,7 +73,7 @@ public sealed class CharacterNeedsAndSurvivalTests
     public void Sleeping_decreases_fatigue()
     {
         var world = new LogicalWorld(WorldConfiguration.DebugSample, 1);
-        var actions = new CharacterActionSystem(new GridNavigator(world), TestProduction.ForWorld(world));
+        var actions = new CharacterActionSystem(new GridNavigator(world), TestProduction.ForWorld(world), TestProduction.Teaching(world));
         var character = Adult();
         character.Needs.Fatigue = 0.95f;
         character.Activity.Start(ActionKind.Sleep, CharacterRules.SleepDurationTicks, character.Position);
@@ -197,7 +197,7 @@ public sealed class CharacterActionAndAiTests
     public void Actions_progress_and_complete()
     {
         var world = new LogicalWorld(WorldConfiguration.DebugSample, 1);
-        var actions = new CharacterActionSystem(new GridNavigator(world), TestProduction.ForWorld(world));
+        var actions = new CharacterActionSystem(new GridNavigator(world), TestProduction.ForWorld(world), TestProduction.Teaching(world));
         var character = new CharacterState(new CharacterId(1), new LogicalGridCoordinate(0, 0), 1);
         character.Activity.Start(ActionKind.Idle, 3);
         actions.Advance(character);
@@ -211,7 +211,7 @@ public sealed class CharacterActionAndAiTests
     public void Decision_is_deterministic_for_the_same_state()
     {
         var world = new LogicalWorld(WorldConfiguration.DebugSample, 1);
-        var decisions = new CharacterDecisionSystem(new GridNavigator(world), TestProduction.ForWorld(world));
+        var decisions = new CharacterDecisionSystem(new GridNavigator(world), TestProduction.ForWorld(world), TestProduction.Teaching(world));
         var a = Hungry(new CharacterId(1));
         var b = Hungry(new CharacterId(2));
         Assert.Equal(decisions.ChooseKind(a), decisions.ChooseKind(b));

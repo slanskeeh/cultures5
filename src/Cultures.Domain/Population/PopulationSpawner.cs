@@ -30,6 +30,7 @@ public static class PopulationSpawner
                 ? origin
                 : NextLandCell(world, navigator, origin, i, used);
             var character = new CharacterState(ids.NextCharacter(), cell, seed ^ (ulong)(i + 1) * 0x9E3779B97F4A7C15UL);
+            character.Skills.SeedAdult(character.AppearanceSeed);
             roster.Add(character);
             used.Add(cell);
         }

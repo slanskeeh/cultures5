@@ -72,6 +72,15 @@ public partial class Main : Control
             case Key.V:
                 SnapToBuilding();
                 break;
+            case Key.N:
+                DebugCreateChild();
+                break;
+            case Key.T:
+                DebugTeach();
+                break;
+            case Key.K:
+                DebugGrantSkill();
+                break;
             default:
                 return;
         }
@@ -147,6 +156,39 @@ public partial class Main : Control
         _lastCommand = result.Success ? $"cursor to {character.Id}" : result.Error ?? "snap failed";
     }
 
+    private void DebugCreateChild()
+    {
+        if (_host.Population.Count < 1)
+            return;
+        var parentA = _host.Population[_selectedIndex];
+        var parentB = _host.Population[(_selectedIndex + 1) % _host.Population.Count];
+        var result = _host.Commands.Execute(new CreateChildCommand(parentA.Id, parentB.Id));
+        _lastCommand = result.Success ? $"child of {parentA.Id}+{parentB.Id}" : result.Error ?? "birth failed";
+    }
+
+    private void DebugTeach()
+    {
+        if (_host.Population.Count < 1)
+            return;
+        var teacher = _host.Population[_selectedIndex];
+        var studentId = teacher.FamilyLinks.Children.FirstOrDefault();
+        if (!studentId.IsAssigned)
+            studentId = _host.Population[(_selectedIndex + 1) % _host.Population.Count].Id;
+        var result = _host.Commands.Execute(new TeachCharacterCommand(teacher.Id, studentId, SkillType.Farming));
+        _lastCommand = result.Success ? $"teach farming {teacher.Id}→{studentId}" : result.Error ?? "teach failed";
+    }
+
+    private void DebugGrantSkill()
+    {
+        if (_host.Population.Count < 1)
+            return;
+        var character = _host.Population[_selectedIndex];
+        var result = _host.Commands.Execute(new AddSkillExperienceCommand(character.Id, SkillType.Farming, SkillRules.XpPerLevel));
+        _lastCommand = result.Success
+            ? $"farming xp {character.Id} now {character.Skills.GetLevel(SkillType.Farming)}"
+            : result.Error ?? "skill failed";
+    }
+
     private void SnapToBuilding()
     {
         if (_host.Buildings.Count == 0)
@@ -181,6 +223,17 @@ public partial class Main : Control
             : $"{selected.Id} {selected.LifeStage} age {selected.AgeYears:0.0}  {selected.Position}  " +
               $"hunger {selected.Needs.Hunger:0.00}  fatigue {selected.Needs.Fatigue:0.00}  " +
               $"food {selected.Inventory.GetQuantity(ResourceType.Food)}  {selected.Activity.Kind}  work {workplace}";
+        var familyLine = selected is null
+            ? ""
+            : $"parents {string.Join(",", selected.FamilyLinks.Parents.Select(id => id.Value.ToString()))}  " +
+              $"children {string.Join(",", selected.FamilyLinks.Children.Select(id => id.Value.ToString()))}  " +
+              $"partner {selected.Activity.PartnerId}  skill {selected.Activity.Skill?.ToString() ?? "-"}";
+        var skillLine = selected is null
+            ? ""
+            : $"farm {selected.Skills.GetLevel(SkillType.Farming)}  " +
+              $"wood {selected.Skills.GetLevel(SkillType.Woodworking)}  " +
+              $"stone {selected.Skills.GetLevel(SkillType.Stoneworking)}  " +
+              $"craft {selected.Skills.GetLevel(SkillType.Crafting)}";
 
         var buildingLine = inspectBuilding is null
             ? "no building"
@@ -192,13 +245,15 @@ public partial class Main : Control
               $"workers {string.Join(",", inspectBuilding.Workplaces.Select(w => w.Worker.IsAssigned ? w.Worker.Value.ToString() : "-"))}";
 
         _label.Text =
-            "CULTURES — PHASE 4  buildings and production\n" +
+            "CULTURES — PHASE 5  families and skills\n" +
             $"{paused}   seed {_host.WorldSeed}   people {_host.Population.Alive.Count()}/{_host.Population.Count}   buildings {_host.Buildings.Count}   tick {date.Tick}\n" +
             $"cursor {cursor}   {chunk}   {terrain.Biome} {water} elev {terrain.Elevation:0.00}\n" +
             $"{characterLine}\n" +
+            $"{familyLine}\n" +
+            $"{skillLine}\n" +
             $"{buildingLine}\n" +
             $"last: {_lastCommand}\n" +
-            "Arrows cursor   Tab person   C follow   B building   V to building   G mark   Space pause\n" +
+            "Arrows cursor   Tab person   C follow   B/V building   N child   T teach   K skill   G mark   Space pause\n" +
             "F farm  S storage  H house  W workshop";
 
         _map.QueueRedraw();

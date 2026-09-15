@@ -1,3 +1,4 @@
+using Cultures.Core.Ids;
 using Cultures.World;
 
 namespace Cultures.Population;
@@ -17,7 +18,9 @@ public enum ActionKind : byte
     Move = 2,
     Eat = 3,
     Sleep = 4,
-    Work = 5
+    Work = 5,
+    Teach = 6,
+    Learn = 7
 }
 
 public sealed class CharacterNeeds
@@ -48,17 +51,26 @@ public sealed class CharacterActivity
     public LogicalGridCoordinate? Target { get; private set; }
     public int DurationTicks { get; private set; }
     public int ProgressTicks { get; private set; }
+    public CharacterId PartnerId { get; private set; }
+    public SkillType? Skill { get; private set; }
     public Queue<LogicalGridCoordinate> RemainingPath { get; } = new();
 
     public bool IsComplete => Kind != ActionKind.None && ProgressTicks >= DurationTicks;
     public bool NeedsDecision => Kind is ActionKind.None || IsComplete;
 
-    public void Start(ActionKind kind, int durationTicks, LogicalGridCoordinate? target = null)
+    public void Start(
+        ActionKind kind,
+        int durationTicks,
+        LogicalGridCoordinate? target = null,
+        CharacterId partner = default,
+        SkillType? skill = null)
     {
         Kind = kind;
         DurationTicks = Math.Max(1, durationTicks);
         ProgressTicks = 0;
         Target = target;
+        PartnerId = partner;
+        Skill = skill;
         RemainingPath.Clear();
     }
 
@@ -68,6 +80,8 @@ public sealed class CharacterActivity
         DurationTicks = 0;
         ProgressTicks = 0;
         Target = null;
+        PartnerId = CharacterId.None;
+        Skill = null;
         RemainingPath.Clear();
     }
 
