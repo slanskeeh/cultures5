@@ -996,6 +996,33 @@ Status: Accepted (temporary)
 Reason:
 Do not pretend a full save exists.
 
+## AD-089 — Diplomacy is a domain system, not a faction field
+
+Status: Accepted
+
+`DiplomacySystem` owns stance mutations. Faction identity and culture stay on their own types. A diplomatic pair is not a property of one faction.
+
+Reason:
+Culture → Faction → Diplomatic relationship remain three layers (AD-082, AD-085).
+
+## AD-090 — Diplomatic mutations go through commands
+
+Status: Accepted
+
+`SetDiplomaticStanceCommand` is the Phase 10 authority. `SetFactionRelationCommand` is a compatibility alias that calls the same `DiplomacySystem.TrySetStance`. Presentation (H) must not write `FactionRelationDirectory` itself.
+
+Reason:
+UI must not own political state.
+
+## AD-091 — Stance has no automatic consequences
+
+Status: Accepted
+
+Neutral / Friendly / Hostile are diplomatic stances only. Changing them does not start war, form an alliance, move people, reveal exploration, claim land, or change the economy. `DiplomaticStanceChangedEvent` is a fact, not a gameplay trigger.
+
+Reason:
+Phase 10 is political state. Consequences belong to later phases.
+
 ## OD-023 — Exact LOD radii and cadences
 
 **Status:** Open
@@ -1091,3 +1118,27 @@ Phase 9 political groups are `FactionId`. What a future `CivilizationId` means (
 **Status:** Open
 
 There is no new-game faction pick, visual identity, or cultural production modifiers. Debug P/J/H only inspect and assign.
+
+## OD-039 — Treaties and diplomatic history
+
+**Status:** Open
+
+Phase 10 stores the current stance only. Treaties, access, tribute and a history log of insults/aid are not represented.
+
+## OD-040 — Hostile versus war
+
+**Status:** Open
+
+Hostile is not war. Whether a later military phase derives war from Hostile, or uses a separate War state, is undecided.
+
+## OD-041 — AI diplomacy
+
+**Status:** Open
+
+Factions do not autonomously change stance. There is no reputation, espionage or negotiation AI.
+
+## OD-042 — Alliance and other extra stances
+
+**Status:** Open
+
+Alliance, truce, vassal, embargo and similar labels are not added. Keep three stances until a later phase needs a fourth.

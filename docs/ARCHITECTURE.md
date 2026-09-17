@@ -103,6 +103,7 @@ Examples:
 - MoveCharacterCommand
 - BuildBuildingCommand
 - AssignProfessionCommand
+- SetDiplomaticStanceCommand
 - TradeCommand
 - OfferTreatyCommand
 

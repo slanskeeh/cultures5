@@ -259,9 +259,13 @@ Political positions should not be arbitrary UI assignments.
 
 ## 14. Diplomacy
 
-Diplomatic relations are state + history.
+Phase 10 implements diplomacy as `DiplomacySystem` over the existing sparse symmetric `FactionRelationDirectory`.
 
-A relation can remember:
+Stances: Neutral (implicit/missing), Friendly, Hostile.
+
+These are diplomatic stances only. Friendly is not an alliance. Hostile is not war. Changing stance does not move people, reveal geography, claim land, or alter the economy.
+
+A later relation can remember:
 - treaties;
 - trade;
 - aid;
@@ -270,6 +274,8 @@ A relation can remember:
 - territorial conflicts;
 - tribute;
 - insults/refusals.
+
+Those histories are not stored yet (OD-039).
 
 Diplomacy must be able to react to events without rewriting the character system.
 

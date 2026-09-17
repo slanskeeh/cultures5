@@ -851,6 +851,71 @@ Phase 10 — Diplomacy. Do not start automatically.
 - Default people stay Neutral / no faction; debug J assigns membership.
 - Do not consume `SimulationHost.Random` for culture generation.
 
+## 2026-09-17 — Task: Phase 10 Diplomacy
+
+### 1. Task
+Turn Phase 9 relation data into an authoritative diplomacy domain with explicit Neutral/Friendly/Hostile transitions. No war, trade, territory, economy or AI.
+
+### 2. Done
+- `DiplomacySystem` is the only stance mutator; storage remains sparse symmetric `FactionRelationDirectory` (AD-085).
+- `SetDiplomaticStanceCommand` validates factions, rejects self and undefined stances, stores Friendly/Hostile, removes Neutral.
+- `SetFactionRelationCommand` is a compatibility alias to the same method.
+- `DiplomaticStanceChangedEvent` publishes previous/current stance; no gameplay listeners.
+- Debug H uses `SetDiplomaticStanceCommand`. HUD labeled PHASE 10.
+- Persistence still mapper-only / envelope v2.
+
+### 3. Working / Verified
+- 179/179 tests including symmetry, sparse Neutral, replace pair, invalid factions/stance, isolation from culture/membership/exploration/terrain/LOD/resources, determinism. Phase 9 tests still pass.
+- Solution build 0 warnings / 0 errors.
+- Godot 4.7.2.stable.mono headless `--quit-after 45` exit 0. H was not clicked in a GUI session.
+
+### 4. Tests
+- `dotnet test tests/Cultures.Tests/Cultures.Tests.csproj -warnaserror` — 179/179 passing. Previously 175; +4 diplomacy tests.
+
+### 5. Bugs found
+- None.
+
+### 6. Bugs fixed
+- None.
+
+### 7. Known limitations / TODO
+- No treaties, history, tribute or access (OD-039).
+- Hostile is not war (OD-040).
+- No AI diplomacy (OD-041).
+- No Alliance/Truce/Vassal stances (OD-042).
+- Diplomacy not in save envelope v2 (OD-036).
+- H debug control not GUI-verified.
+
+### 8. Architecture decisions
+- AD-089 diplomacy ≠ faction identity
+- AD-090 commands are authoritative
+- AD-091 no automatic consequences
+- OD-039..OD-042 open
+
+### 9. Files changed
+- `src/Cultures.Domain/Civilization/DiplomacySystem.cs`, `DiplomacyCommands.cs`
+- `src/Cultures.Domain/Civilization/CivilizationSystem.cs`, `CivilizationCommands.cs`, `CivilizationEvents.cs`, `FactionRelation.cs`
+- `src/Cultures.Domain/Application/SimulationHost.cs`
+- `presentation/Main.cs`
+- `tests/Cultures.Tests/DiplomacyTests.cs`
+- `docs/DECISIONS.md`, `docs/MVP_ROADMAP.md`, `docs/SIMULATION_ARCHITECTURE.md`, `docs/ARCHITECTURE.md`, `docs/DEVELOPMENT_LOG.md`
+
+### 10. Current project health
+- Build: working, 0 warnings, 0 errors
+- Tests: 179/179 passing
+- Runtime: headless Main boots
+- Known broken areas: none identified; diplomacy HUD not GUI-verified
+
+### 11. Next step
+Phase 11 — Internal Politics. Do not start automatically.
+
+### 12. Notes for ChatGPT
+- Do not start war because Hostile exists.
+- Do not add Alliance because Friendly exists.
+- Do not write `FactionRelationDirectory` from Godot; use `SetDiplomaticStanceCommand`.
+- `SetFactionRelationCommand` is an alias, not a second store.
+- Diplomacy must not consume `SimulationHost.Random`.
+
 
 
 

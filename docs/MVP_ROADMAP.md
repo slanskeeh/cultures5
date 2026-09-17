@@ -206,22 +206,28 @@ Cultures and factions exist as simulation state distinct from settlements and ge
 
 ## Phase 10 — Diplomacy
 
-Status: NEXT
+Status: COMPLETED
 
-Goals:
-- trade;
-- treaties;
-- tribute;
-- access;
-- information;
-- alliances;
-- war/peace foundation;
-- diplomatic history.
+Delivered:
+- `DiplomacySystem` as the authority for Neutral / Friendly / Hostile;
+- `SetDiplomaticStanceCommand` with validation, sparse storage, symmetry;
+- `DiplomaticStanceChangedEvent` with no gameplay listeners;
+- debug H uses the command path;
+- no war, trade, territory, economy or AI effects.
+
+Not done (later / open):
+- treaties, tribute, access, diplomatic history (OD-039);
+- war derived from Hostile (OD-040, Phase 12);
+- AI diplomacy (OD-041);
+- extra stances such as Alliance (OD-042);
+- trade (later).
 
 Exit criteria:
-Two autonomous civilizations can maintain evolving relations without scripted sequences.
+Two factions can hold an evolving diplomatic stance without scripted sequences. Autonomous civilization diplomacy remains later.
 
 ## Phase 11 — Internal Politics
+
+Status: NEXT
 
 Goals:
 - leader;

@@ -75,15 +75,15 @@ public sealed class AssignCultureHandler : ICommandHandler<AssignCultureCommand>
 
 public sealed class SetFactionRelationHandler : ICommandHandler<SetFactionRelationCommand>
 {
-    public SetFactionRelationHandler(CivilizationSystem civilization)
+    public SetFactionRelationHandler(DiplomacySystem diplomacy)
     {
-        Civilization = civilization ?? throw new ArgumentNullException(nameof(civilization));
+        Diplomacy = diplomacy ?? throw new ArgumentNullException(nameof(diplomacy));
     }
 
-    public CivilizationSystem Civilization { get; }
+    public DiplomacySystem Diplomacy { get; }
 
     public CommandResult Handle(SetFactionRelationCommand command) =>
-        Civilization.TrySetRelation(command.Left, command.Right, command.Stance, out var error)
+        Diplomacy.TrySetStance(command.Left, command.Right, command.Stance, out var error)
             ? CommandResult.Ok()
             : CommandResult.Fail(error);
 }

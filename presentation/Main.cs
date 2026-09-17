@@ -342,17 +342,17 @@ public partial class Main : Control
             return;
         var left = _host.Civilization.Factions[_selectedFactionIndex % _host.Civilization.Factions.Count];
         var right = _host.Civilization.Factions[(_selectedFactionIndex + 1) % _host.Civilization.Factions.Count];
-        var current = _host.Civilization.RelationOf(left.Id, right.Id);
+        var current = _host.Diplomacy.StanceOf(left.Id, right.Id);
         var next = current switch
         {
             FactionRelationStance.Neutral => FactionRelationStance.Friendly,
             FactionRelationStance.Friendly => FactionRelationStance.Hostile,
             _ => FactionRelationStance.Neutral
         };
-        var result = _host.Commands.Execute(new SetFactionRelationCommand(left.Id, right.Id, next));
+        var result = _host.Commands.Execute(new SetDiplomaticStanceCommand(left.Id, right.Id, next));
         _lastCommand = result.Success
             ? $"{left.Name} ↔ {right.Name} {next}"
-            : result.Error ?? "relation failed";
+            : result.Error ?? "diplomacy failed";
     }
 
     private void DebugEvaluateSettlements()
@@ -468,10 +468,10 @@ public partial class Main : Control
               $"members {_host.Civilization.CountMembers(selectedFaction.Id)}  home {selectedFaction.HomeSettlement}";
         var relationLine = selectedFaction is null || otherFaction is null
             ? "no relation"
-            : $"{selectedFaction.Name} ↔ {otherFaction.Name}  {_host.Civilization.RelationOf(selectedFaction.Id, otherFaction.Id)}";
+            : $"{selectedFaction.Name} ↔ {otherFaction.Name}  {_host.Diplomacy.StanceOf(selectedFaction.Id, otherFaction.Id)}";
 
         _label.Text =
-            "CULTURES — PHASE 9  factions and cultures\n" +
+            "CULTURES — PHASE 10  diplomacy\n" +
             $"{paused}   seed {_host.WorldSeed}   people {_host.Population.Alive.Count()}/{_host.Population.Count}   " +
             $"buildings {_host.Buildings.Count}   settlements {_host.Settlements.Count}   tick {date.Tick}\n" +
             $"cursor {cursor}   {chunk}   {terrain.Biome} {water} elev {terrain.Elevation:0.00}\n" +
@@ -486,7 +486,7 @@ public partial class Main : Control
             $"{relationLine}\n" +
             $"last: {_lastCommand}\n" +
             "Arrows cursor   Tab person   C follow   B/V building   M/U settlement   E detect   L lod   O refresh   9 agg  0 full\n" +
-            "P faction   J join   H relation   Q explore overlay   R rumor   S scout   D map   F confirm   A analyze   N child   T teach   K skill   G mark   Space";
+            "P faction   J join   H diplomacy   Q explore overlay   R rumor   S scout   D map   F confirm   A analyze   N child   T teach   K skill   G mark   Space";
 
         _map.QueueRedraw();
     }

@@ -2,6 +2,9 @@ using Cultures.Core.Ids;
 
 namespace Cultures.Civilization;
 
+/// <summary>
+/// Diplomatic stance only. Friendly is not an alliance. Hostile is not war.
+/// </summary>
 public enum FactionRelationStance : byte
 {
     Neutral = 0,

@@ -97,7 +97,8 @@ public sealed class SimulationHost
         Commands.Register(new CreateFactionHandler(Civilization));
         Commands.Register(new AssignFactionMembershipHandler(Civilization));
         Commands.Register(new AssignCultureHandler(Civilization));
-        Commands.Register(new SetFactionRelationHandler(Civilization));
+        Commands.Register(new SetFactionRelationHandler(Civilization.Diplomacy));
+        Commands.Register(new SetDiplomaticStanceHandler(Civilization.Diplomacy));
     }
 
     public ulong WorldSeed { get; }
@@ -123,6 +124,7 @@ public sealed class SimulationHost
     public LodSystem Lod { get; }
     public ExplorationSystem Exploration { get; }
     public CivilizationSystem Civilization { get; }
+    public DiplomacySystem Diplomacy => Civilization.Diplomacy;
 
     public ulong Step(ulong ticks)
     {

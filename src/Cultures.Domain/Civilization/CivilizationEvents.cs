@@ -19,7 +19,7 @@ public sealed record CharacterCultureChangedEvent(
     CultureId Previous,
     CultureId Current) : ISimulationEvent;
 
-public sealed record FactionRelationChangedEvent(
+public sealed record DiplomaticStanceChangedEvent(
     ulong Tick,
     FactionId Lower,
     FactionId Higher,

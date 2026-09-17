@@ -25,6 +25,7 @@ public sealed class CivilizationSystem
         Cultures = new CultureDirectory();
         Factions = new FactionDirectory();
         Relations = new FactionRelationDirectory();
+        Diplomacy = new DiplomacySystem(Factions, Relations, Events, Clock);
         EnsureNeutralCulture();
     }
 
@@ -36,6 +37,7 @@ public sealed class CivilizationSystem
     public CultureDirectory Cultures { get; }
     public FactionDirectory Factions { get; }
     public FactionRelationDirectory Relations { get; }
+    public DiplomacySystem Diplomacy { get; }
 
     public void SeedBaseline()
     {
@@ -148,49 +150,10 @@ public sealed class CivilizationSystem
         return true;
     }
 
-    public bool TrySetRelation(FactionId a, FactionId b, FactionRelationStance stance, out string error)
-    {
-        error = "Relation failed.";
-        if (a == b)
-        {
-            error = "A faction cannot have a relation with itself.";
-            return false;
-        }
+    public bool TrySetRelation(FactionId a, FactionId b, FactionRelationStance stance, out string error) =>
+        Diplomacy.TrySetStance(a, b, stance, out error);
 
-        if (!Factions.TryGet(a, out _) || !Factions.TryGet(b, out _))
-        {
-            error = "Faction does not exist.";
-            return false;
-        }
-
-        var previous = RelationOf(a, b);
-        if (previous == stance)
-        {
-            error = $"Relation is already {stance}.";
-            return false;
-        }
-
-        if (stance == FactionRelationStance.Neutral)
-        {
-            Relations.Remove(a, b);
-        }
-        else
-        {
-            var relation = Relations.GetOrCreate(a, b);
-            relation.Stance = stance;
-        }
-
-        var (lower, higher) = FactionRelationDirectory.Normalize(a, b);
-        Events.Publish(new FactionRelationChangedEvent(Clock.Tick, lower, higher, previous, stance));
-        return true;
-    }
-
-    public FactionRelationStance RelationOf(FactionId a, FactionId b)
-    {
-        if (a == b)
-            return FactionRelationStance.Neutral;
-        return Relations.TryGet(a, b, out var relation) ? relation.Stance : FactionRelationStance.Neutral;
-    }
+    public FactionRelationStance RelationOf(FactionId a, FactionId b) => Diplomacy.StanceOf(a, b);
 
     public int CountMembers(FactionId faction) =>
         Population.All.Count(person => person.IsAlive && person.Faction == faction);
