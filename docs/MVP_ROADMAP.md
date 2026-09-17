@@ -227,20 +227,28 @@ Two factions can hold an evolving diplomatic stance without scripted sequences. 
 
 ## Phase 11 — Internal Politics
 
-Status: NEXT
+Status: COMPLETED
 
-Goals:
-- leader;
-- council;
-- influence;
-- offices;
-- factions/interests;
-- succession/appointment logic.
+Delivered:
+- faction-local `PoliticalGroupState` with typed `PoliticalGroupId`;
+- optional `CharacterState.PoliticalGroup` with cross-faction rejection;
+- explicit 0–100 influence independent of member count;
+- sparse 0–100 internal stability (missing = 50);
+- commands and events without autonomous political AI;
+- debug I/Y/W/1/2.
+
+Not done (later / open):
+- taxonomy, mandatory affiliation (OD-043, OD-044);
+- influence formula (OD-045);
+- leaders, offices, elections, succession (OD-047, OD-048);
+- ideologies, rebellions, laws, taxation.
 
 Exit criteria:
-Political positions emerge from character/social state.
+Internal political groups, influence and stability exist as simulation state. Political positions emerging from character/social state remain later.
 
 ## Phase 12 — Military
+
+Status: NEXT
 
 Goals:
 - recruitment;

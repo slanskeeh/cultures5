@@ -916,6 +916,77 @@ Phase 11 — Internal Politics. Do not start automatically.
 - `SetFactionRelationCommand` is an alias, not a second store.
 - Diplomacy must not consume `SimulationHost.Random`.
 
+## 2026-09-17 — Task: Phase 11 Internal Politics
+
+### 1. Task
+Add faction-local political groups, optional character affiliation, explicit influence and internal stability. No elections, leaders, rebellions or political AI.
+
+### 2. Done
+- `PoliticalGroupId` and faction-local `PoliticalGroupState` (name + tradition/authority/commerce data).
+- Sparse `PoliticalGroupDirectory` and `InternalPoliticsDirectory` (missing stability = 50).
+- `CharacterState.PoliticalGroup`; cross-faction assign fails; leaving a faction clears the group.
+- Influence 0–100 on the group, independent of derived member counts.
+- Commands: CreatePoliticalGroup / AssignPoliticalGroup / SetPoliticalGroupInfluence / SetInternalStability.
+- Events are facts only. `Step` does not tick politics.
+- Debug: I cycle group, Y affiliate, W stability, 1/2 influence. P/J/H unchanged.
+- Mapper DTOs; envelope v2 unchanged.
+
+### 3. Working / Verified
+- 188/188 tests including identity, creation, membership, influence bounds, sparse stability, isolation, determinism, mapper. Phase 10 tests still pass.
+- Solution build 0 warnings / 0 errors.
+- Godot 4.7.2.stable.mono headless `--quit-after 45` exit 0. I/Y/W/1/2 were not clicked in a GUI session.
+
+### 4. Tests
+- `dotnet test tests/Cultures.Tests/Cultures.Tests.csproj -warnaserror` — 188/188 passing. Previously 179; +9 politics tests.
+
+### 5. Bugs found
+- None.
+
+### 6. Bugs fixed
+- None.
+
+### 7. Known limitations / TODO
+- No leaders, offices, elections, succession (OD-047, OD-048).
+- No influence formula (OD-045).
+- No rebellions, laws, taxation, or political AI.
+- Politics not in save envelope v2 (OD-036).
+- Debug politics HUD not GUI-verified.
+
+### 8. Architecture decisions
+- AD-092 faction-local groups
+- AD-093 affiliation ≠ culture/faction
+- AD-094 influence ≠ population
+- AD-095 sparse stability
+- AD-096 no automatic consequences
+- OD-043..OD-049 open
+
+### 9. Files changed
+- `src/Cultures.Domain/Civilization/InternalPoliticsSystem.cs`, `PoliticsCommands.cs`, `PoliticsEvents.cs`, `PoliticsRules.cs`, `PoliticalGroupState.cs`
+- `src/Cultures.Domain/Civilization/CivilizationSystem.cs`, `FictionalName.cs`
+- `src/Cultures.Domain/Core/Ids/EntityIds.cs`, `EntityIdFactory.cs`
+- `src/Cultures.Domain/Population/CharacterState.cs`
+- `src/Cultures.Domain/Application/SimulationHost.cs`
+- `src/Cultures.Domain/Application/Persistence/CivilizationRecords.cs`
+- `presentation/Main.cs`, `Main.tscn`
+- `tests/Cultures.Tests/PoliticsTests.cs`, `EntityIdTests.cs`
+- `docs/DECISIONS.md`, `docs/MVP_ROADMAP.md`, `docs/SIMULATION_ARCHITECTURE.md`, `docs/ARCHITECTURE.md`, `docs/DEVELOPMENT_LOG.md`
+
+### 10. Current project health
+- Build: working, 0 warnings, 0 errors
+- Tests: 188/188 passing
+- Runtime: headless Main boots
+- Known broken areas: none identified; politics HUD not GUI-verified
+
+### 11. Next step
+Phase 12 — Military. Do not start automatically.
+
+### 12. Notes for ChatGPT
+- Do not add elections or kings because political groups exist.
+- Do not tick politics every simulation step.
+- Do not let Hostile diplomacy change stability.
+- Influence is not member count. Do not replace it with a population formula without closing OD-045.
+- Do not attach groups to chunks or exploration.
+
 
 
 

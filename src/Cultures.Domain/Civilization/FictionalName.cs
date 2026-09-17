@@ -45,6 +45,18 @@ public static class FictionalName
         return new CultureTraits(Next(), Next(), Next(), Next(), Next());
     }
 
+    public static PoliticalGroupTraits PoliticalTraits(ulong seed, ulong salt)
+    {
+        var h = Mix(seed, salt ^ 0xC6A4A7935BD1E995UL);
+        byte Next()
+        {
+            h = Mix(h, 0x94D049BB133111EBUL);
+            return (byte)(h % (ulong)CivilizationRules.TraitBand);
+        }
+
+        return new PoliticalGroupTraits(Next(), Next(), Next());
+    }
+
     private static int Index(ulong hash, int length) => (int)(hash % (ulong)length);
 
     private static ulong Mix(ulong seed, ulong salt)

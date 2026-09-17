@@ -243,7 +243,13 @@ Phase 9 adds `CivilizationSystem`: cultures and factions are social entities, no
 
 ## 13. Politics
 
-Influence is derived from multiple factors:
+Phase 11 implements internal politics as `InternalPoliticsSystem`.
+
+A political group belongs to exactly one faction. Membership is `CharacterState.PoliticalGroup` and must match the character's faction. Influence is explicit 0–100 state and is not equal to member count. Faction internal stability is a sparse 0–100 value (missing = 50).
+
+There is no autonomous political loop, no offices, elections, succession, or rebellions.
+
+Later influence may still be derived from:
 - wealth;
 - family reputation;
 - profession;
@@ -255,7 +261,9 @@ Influence is derived from multiple factors:
 - military reputation;
 - popularity.
 
-Political positions should not be arbitrary UI assignments.
+Political positions should not be arbitrary UI assignments. Phase 11 only stores group affiliation, influence and stability.
+
+Internal politics is social/faction state. It does not create territory, diplomacy consequences, war, economy, or autonomous political behavior.
 
 ## 14. Diplomacy
 

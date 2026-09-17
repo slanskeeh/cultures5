@@ -83,6 +83,7 @@ BuildingId
 SettlementId
 CultureId
 FactionId
+PoliticalGroupId
 CivilizationId
 RegionId
 ChunkId

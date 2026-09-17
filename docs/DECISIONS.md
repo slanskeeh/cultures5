@@ -1023,6 +1023,51 @@ Neutral / Friendly / Hostile are diplomatic stances only. Changing them does not
 Reason:
 Phase 10 is political state. Consequences belong to later phases.
 
+## AD-092 — Political groups are faction-local
+
+Status: Accepted
+
+`PoliticalGroupState` references exactly one `FactionId`. Two factions may have similarly named groups; they are different identities. Groups are not cultures, not factions, and not global classes.
+
+Reason:
+Internal politics lives inside a faction (Culture → Faction → Group → Character).
+
+## AD-093 — Political affiliation is separate from culture and faction
+
+Status: Accepted
+
+`CharacterState.PoliticalGroup` is optional (`None`). Joining a faction does not assign a group. Joining a group does not change culture. Cross-faction affiliation is rejected. Changing faction clears a mismatched group.
+
+Reason:
+Keep AD-084 membership and AD-082 culture distinct from internal blocs.
+
+## AD-094 — Influence is not population
+
+Status: Accepted
+
+`PoliticalGroupState.Influence` is explicit integer state in 0–100. Member counts are derived from the roster. A group may have high influence with zero members.
+
+Reason:
+Elders can outweigh a larger constituency. No formula yet (OD-045).
+
+## AD-095 — Internal stability is sparse faction state
+
+Status: Accepted
+
+`InternalPoliticsDirectory` stores 0–100 stability per faction. Missing means 50. Default is not stored. Diplomacy does not write this directory.
+
+Reason:
+Need a faction-level political condition without a tick-based unrest simulation.
+
+## AD-096 — Internal politics has no automatic consequences
+
+Status: Accepted
+
+Commands change group membership, influence and stability only. Events do not start rebellions, wars, diplomatic shifts, or economic effects. `SimulationHost.Step` does not tick politics.
+
+Reason:
+Phase 11 is state + validation, not political AI.
+
 ## OD-023 — Exact LOD radii and cadences
 
 **Status:** Open
@@ -1142,3 +1187,45 @@ Factions do not autonomously change stance. There is no reputation, espionage or
 **Status:** Open
 
 Alliance, truce, vassal, embargo and similar labels are not added. Keep three stances until a later phase needs a fourth.
+
+## OD-043 — Political group taxonomy
+
+**Status:** Open
+
+Groups are fictional named blocs with compact tradition/authority/commerce bytes. There is no fixed set of Elders/Merchants/Farmers classes.
+
+## OD-044 — Who may belong to a political group
+
+**Status:** Open
+
+Unaffiliated (`PoliticalGroupId.None`) is allowed. Whether every faction member must eventually belong to a group is undecided.
+
+## OD-045 — Influence calculation
+
+**Status:** Open
+
+Influence is set by command. Whether it will later derive from wealth, office, age or population is not decided.
+
+## OD-046 — Stability model
+
+**Status:** Open
+
+0–100 with Unstable/Tense/Stable bands is provisional. Legitimacy is not a separate value.
+
+## OD-047 — Leadership and offices
+
+**Status:** Open
+
+No leader, council, or office types. `CharacterId Leader` on settlements remains unused.
+
+## OD-048 — Elections and succession
+
+**Status:** Open
+
+Not implemented.
+
+## OD-049 — Political ideologies
+
+**Status:** Open
+
+Trait bytes are not named ideologies and do not drive policy.

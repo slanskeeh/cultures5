@@ -26,6 +26,18 @@ public sealed record FactionRecord(
 
 public sealed record FactionRelationRecord(ulong Lower, ulong Higher, byte Stance);
 
+public sealed record PoliticalGroupRecord(
+    ulong Id,
+    ulong Faction,
+    string Name,
+    byte Tradition,
+    byte Authority,
+    byte Commerce,
+    ulong GenerationSalt,
+    int Influence);
+
+public sealed record InternalPoliticsRecord(ulong Faction, int Stability);
+
 public static class CivilizationMapper
 {
     public static CultureRecord ToRecord(CultureState culture)
@@ -96,5 +108,42 @@ public static class CivilizationMapper
             new FactionId(record.Lower),
             new FactionId(record.Higher),
             (FactionRelationStance)record.Stance);
+    }
+
+    public static PoliticalGroupRecord ToRecord(PoliticalGroupState group)
+    {
+        ArgumentNullException.ThrowIfNull(group);
+        return new PoliticalGroupRecord(
+            group.Id.Value,
+            group.Faction.Value,
+            group.Name,
+            group.Traits.Tradition,
+            group.Traits.Authority,
+            group.Traits.Commerce,
+            group.GenerationSalt,
+            group.Influence);
+    }
+
+    public static PoliticalGroupState FromRecord(PoliticalGroupRecord record)
+    {
+        ArgumentNullException.ThrowIfNull(record);
+        return new PoliticalGroupState(
+            new PoliticalGroupId(record.Id),
+            new FactionId(record.Faction),
+            record.Name,
+            new PoliticalGroupTraits(record.Tradition, record.Authority, record.Commerce),
+            record.GenerationSalt)
+        {
+            Influence = record.Influence
+        };
+    }
+
+    public static InternalPoliticsRecord ToRecord(FactionId faction, InternalStability stability) =>
+        new(faction.Value, stability.Value);
+
+    public static InternalStability FromRecord(InternalPoliticsRecord record)
+    {
+        ArgumentNullException.ThrowIfNull(record);
+        return new InternalStability(record.Stability);
     }
 }

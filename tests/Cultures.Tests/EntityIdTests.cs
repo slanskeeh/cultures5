@@ -46,6 +46,7 @@ public sealed class EntityIdTests
         Assert.NotEqual((ulong)Array.IndexOf(discarded, second), second.Value);
         Assert.Equal(2UL, factory.NextCulture().Value);
         Assert.Equal(1UL, factory.NextFaction().Value);
+        Assert.Equal(1UL, factory.NextPoliticalGroup().Value);
     }
 
     [Fact]
@@ -69,5 +70,7 @@ public sealed class EntityIdTests
         Assert.NotEqual(CultureId.None, CultureId.Neutral);
         Assert.False(FactionId.None.IsAssigned);
         Assert.True(new FactionId(1).IsAssigned);
+        Assert.False(PoliticalGroupId.None.IsAssigned);
+        Assert.True(new PoliticalGroupId(1).IsAssigned);
     }
 }

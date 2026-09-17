@@ -30,6 +30,7 @@ public partial class Main : Control
     private int _selectedBuildingIndex;
     private int _selectedSettlementIndex;
     private int _selectedFactionIndex;
+    private int _selectedGroupIndex;
 
     public override void _Ready()
     {
@@ -138,6 +139,21 @@ public partial class Main : Control
                 break;
             case Key.H:
                 DebugCycleRelation();
+                break;
+            case Key.I:
+                CyclePoliticalGroup();
+                break;
+            case Key.Y:
+                DebugJoinPoliticalGroup();
+                break;
+            case Key.W:
+                DebugCycleStability();
+                break;
+            case Key.Key1:
+                DebugAdjustInfluence(-10);
+                break;
+            case Key.Key2:
+                DebugAdjustInfluence(10);
                 break;
             default:
                 return;
@@ -319,6 +335,7 @@ public partial class Main : Control
         if (_host.Civilization.Factions.Count == 0)
             return;
         _selectedFactionIndex = (_selectedFactionIndex + 1) % _host.Civilization.Factions.Count;
+        _selectedGroupIndex = 0;
         var faction = _host.Civilization.Factions[_selectedFactionIndex];
         _lastCommand = $"inspect {faction.Id} {faction.Name}";
     }
@@ -353,6 +370,71 @@ public partial class Main : Control
         _lastCommand = result.Success
             ? $"{left.Name} ↔ {right.Name} {next}"
             : result.Error ?? "diplomacy failed";
+    }
+
+    private IReadOnlyList<PoliticalGroupState> GroupsOfSelectedFaction()
+    {
+        if (_host.Civilization.Factions.Count == 0)
+            return [];
+        var faction = _host.Civilization.Factions[_selectedFactionIndex % _host.Civilization.Factions.Count];
+        return _host.Politics.Groups.ForFaction(faction.Id);
+    }
+
+    private void CyclePoliticalGroup()
+    {
+        var groups = GroupsOfSelectedFaction();
+        if (groups.Count == 0)
+            return;
+        _selectedGroupIndex = (_selectedGroupIndex + 1) % groups.Count;
+        var group = groups[_selectedGroupIndex];
+        _lastCommand = $"inspect {group.Id} {group.Name}";
+    }
+
+    private void DebugJoinPoliticalGroup()
+    {
+        if (_host.Population.Count == 0)
+            return;
+        var groups = GroupsOfSelectedFaction();
+        if (groups.Count == 0)
+            return;
+        var person = _host.Population[_selectedIndex];
+        var group = groups[_selectedGroupIndex % groups.Count];
+        var target = person.PoliticalGroup == group.Id ? PoliticalGroupId.None : group.Id;
+        var result = _host.Commands.Execute(new AssignPoliticalGroupCommand(person.Id, target));
+        _lastCommand = result.Success
+            ? $"{person.Id} group {target}"
+            : result.Error ?? "political affiliation failed";
+    }
+
+    private void DebugCycleStability()
+    {
+        if (_host.Civilization.Factions.Count == 0)
+            return;
+        var faction = _host.Civilization.Factions[_selectedFactionIndex % _host.Civilization.Factions.Count];
+        var current = _host.Politics.Stability.Of(faction.Id).Value;
+        var next = current switch
+        {
+            <= PoliticsRules.UnstableCeiling => 50,
+            <= PoliticsRules.TenseCeiling => 100,
+            _ => 0
+        };
+        var result = _host.Commands.Execute(new SetInternalStabilityCommand(faction.Id, next));
+        _lastCommand = result.Success
+            ? $"{faction.Name} stability {next}"
+            : result.Error ?? "stability failed";
+    }
+
+    private void DebugAdjustInfluence(int delta)
+    {
+        var groups = GroupsOfSelectedFaction();
+        if (groups.Count == 0)
+            return;
+        var group = groups[_selectedGroupIndex % groups.Count];
+        var target = group.Influence + delta;
+        var result = _host.Commands.Execute(new SetPoliticalGroupInfluenceCommand(group.Id, target));
+        _lastCommand = result.Success
+            ? $"{group.Name} influence {target}"
+            : result.Error ?? "influence failed";
     }
 
     private void DebugEvaluateSettlements()
@@ -401,7 +483,7 @@ public partial class Main : Control
             : $"{selected.Id} {selected.LifeStage} age {selected.AgeYears:0.0}  {selected.Position}  " +
               $"hunger {selected.Needs.Hunger:0.00}  fatigue {selected.Needs.Fatigue:0.00}  " +
               $"food {selected.Inventory.GetQuantity(ResourceType.Food)}  {selected.Activity.Kind}  " +
-              $"work {workplace}  {selected.Settlement}  {selected.Culture}  {selected.Faction}  lod {selected.LodTier}";
+              $"work {workplace}  {selected.Settlement}  {selected.Culture}  {selected.Faction}  {selected.PoliticalGroup}  lod {selected.LodTier}";
         var familyLine = selected is null
             ? ""
             : $"parents {string.Join(",", selected.FamilyLinks.Parents.Select(id => id.Value.ToString()))}  " +
@@ -469,9 +551,20 @@ public partial class Main : Control
         var relationLine = selectedFaction is null || otherFaction is null
             ? "no relation"
             : $"{selectedFaction.Name} ↔ {otherFaction.Name}  {_host.Diplomacy.StanceOf(selectedFaction.Id, otherFaction.Id)}";
+        var groups = selectedFaction is null ? [] : _host.Politics.Groups.ForFaction(selectedFaction.Id);
+        var selectedGroup = groups.Count > 0 ? groups[_selectedGroupIndex % groups.Count] : null;
+        var stability = selectedFaction is null
+            ? InternalStability.Default
+            : _host.Politics.Stability.Of(selectedFaction.Id);
+        var politicsLine = selectedFaction is null
+            ? "no politics"
+            : $"stab {stability.Value} {stability.Band}  groups {groups.Count}";
+        var groupLine = selectedGroup is null
+            ? "no political group"
+            : $"{selectedGroup.Id} {selectedGroup.Name}  members {_host.Politics.CountMembers(selectedGroup.Id)}  infl {selectedGroup.Influence}";
 
         _label.Text =
-            "CULTURES — PHASE 10  diplomacy\n" +
+            "CULTURES — PHASE 11  internal politics\n" +
             $"{paused}   seed {_host.WorldSeed}   people {_host.Population.Alive.Count()}/{_host.Population.Count}   " +
             $"buildings {_host.Buildings.Count}   settlements {_host.Settlements.Count}   tick {date.Tick}\n" +
             $"cursor {cursor}   {chunk}   {terrain.Biome} {water} elev {terrain.Elevation:0.00}\n" +
@@ -484,9 +577,11 @@ public partial class Main : Control
             $"{explorationLine}\n" +
             $"{factionLine}\n" +
             $"{relationLine}\n" +
+            $"{politicsLine}\n" +
+            $"{groupLine}\n" +
             $"last: {_lastCommand}\n" +
             "Arrows cursor   Tab person   C follow   B/V building   M/U settlement   E detect   L lod   O refresh   9 agg  0 full\n" +
-            "P faction   J join   H diplomacy   Q explore overlay   R rumor   S scout   D map   F confirm   A analyze   N child   T teach   K skill   G mark   Space";
+            "P faction   J join   H diplomacy   I group   Y affiliate   W stability   1/2 influence   Q overlay   R rumor   S scout   D map   F confirm   A analyze   Space";
 
         _map.QueueRedraw();
     }

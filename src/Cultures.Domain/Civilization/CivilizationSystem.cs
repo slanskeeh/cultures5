@@ -118,7 +118,18 @@ public sealed class CivilizationSystem
             return false;
         }
 
+        var previousGroup = character.PoliticalGroup;
         character.Faction = factionId;
+        if (previousGroup.IsAssigned)
+        {
+            character.PoliticalGroup = PoliticalGroupId.None;
+            Events.Publish(new PoliticalGroupMembershipChangedEvent(
+                Clock.Tick,
+                characterId,
+                previousGroup,
+                PoliticalGroupId.None));
+        }
+
         Events.Publish(new FactionMembershipChangedEvent(Clock.Tick, characterId, previous, factionId));
         return true;
     }

@@ -72,7 +72,9 @@ public sealed class SimulationHost
         SettlementDetection = new SettlementSystem(World, Population, Buildings, Settlements, Ids, Events, Clock, Recipes);
         Exploration = new ExplorationSystem(World, Clock, Events);
         Civilization = new CivilizationSystem(worldSeed, Ids, Population, Events, Clock);
+        Politics = new InternalPoliticsSystem(worldSeed, Ids, Population, Civilization.Factions, Events, Clock);
         Civilization.SeedBaseline();
+        Politics.SeedBaseline();
 
         Commands.Register(new PingCommandHandler());
         Commands.Register(new MoveDebugCursorHandler(Cursor));
@@ -99,6 +101,10 @@ public sealed class SimulationHost
         Commands.Register(new AssignCultureHandler(Civilization));
         Commands.Register(new SetFactionRelationHandler(Civilization.Diplomacy));
         Commands.Register(new SetDiplomaticStanceHandler(Civilization.Diplomacy));
+        Commands.Register(new CreatePoliticalGroupHandler(Politics));
+        Commands.Register(new AssignPoliticalGroupHandler(Politics));
+        Commands.Register(new SetPoliticalGroupInfluenceHandler(Politics));
+        Commands.Register(new SetInternalStabilityHandler(Politics));
     }
 
     public ulong WorldSeed { get; }
@@ -125,6 +131,7 @@ public sealed class SimulationHost
     public ExplorationSystem Exploration { get; }
     public CivilizationSystem Civilization { get; }
     public DiplomacySystem Diplomacy => Civilization.Diplomacy;
+    public InternalPoliticsSystem Politics { get; }
 
     public ulong Step(ulong ticks)
     {
