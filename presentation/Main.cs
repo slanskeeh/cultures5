@@ -20,8 +20,10 @@ namespace Cultures.Presentation;
 public partial class Main : Control
 {
     public const double SecondsPerTick = 0.1;
+    public const int DebugFontSize = 11;
 
     private SimulationHost _host = null!;
+    private ColorRect _hud = null!;
     private Label _label = null!;
     private WorldDebugMap _map = null!;
     private double _accumulator;
@@ -35,7 +37,10 @@ public partial class Main : Control
     public override void _Ready()
     {
         _host = new SimulationHost(worldSeed: 1, world: WorldConfiguration.DebugSample);
+        _hud = GetNode<ColorRect>("Hud");
         _label = GetNode<Label>("Hud/DebugLabel");
+        _label.AddThemeFontSizeOverride("font_size", DebugFontSize);
+        _label.VerticalAlignment = VerticalAlignment.Top;
         _map = GetNode<WorldDebugMap>("WorldDebugMap");
         _map.Host = _host;
         SnapToSelected();
@@ -583,6 +588,23 @@ public partial class Main : Control
             "Arrows cursor   Tab person   C follow   B/V building   M/U settlement   E detect   L lod   O refresh   9 agg  0 full\n" +
             "P faction   J join   H diplomacy   I group   Y affiliate   W stability   1/2 influence   Q overlay   R rumor   S scout   D map   F confirm   A analyze   Space";
 
+        FitDebugHud();
         _map.QueueRedraw();
+    }
+
+    private void FitDebugHud()
+    {
+        var font = _label.GetThemeFont("font") ?? ThemeDB.FallbackFont;
+        var fontSize = _label.GetThemeFontSize("font_size");
+        if (fontSize <= 0)
+            fontSize = DebugFontSize;
+
+        var width = Mathf.Max(1f, Size.X - 24f);
+        var textSize = font.GetMultilineStringSize(
+            _label.Text,
+            HorizontalAlignment.Left,
+            width,
+            fontSize);
+        _hud.OffsetBottom = Mathf.Ceil(textSize.Y) + 16f;
     }
 }
