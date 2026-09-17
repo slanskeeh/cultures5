@@ -184,20 +184,29 @@ Exploration produces persistent in-memory knowledge independent of the actual wo
 
 ## Phase 9 — Factions and Cultures
 
-Status: NEXT
+Status: COMPLETED
 
-Goals:
-- player faction selection;
-- visual identity;
-- names/language;
-- cultural preferences;
-- cultural production modifiers;
-- cultural relations.
+Delivered:
+- `CultureState` / `FactionState` as separate domain entities;
+- `CultureId.Neutral` as a real Unaffiliated directory entry; generated cultures from seed;
+- `CharacterState.Culture` and `CharacterState.Faction` membership;
+- sparse symmetric Neutral/Friendly/Hostile relations;
+- deterministic invented names and trait bytes;
+- debug P/J/H; mapper seam not in save envelope v2.
+
+Not done (later / open):
+- player faction pick, clothing/architecture presentation, production modifiers (OD-038);
+- language/naming content (OD-032);
+- territory/home (OD-035);
+- diplomacy gameplay (Phase 10);
+- persisting civilizations (OD-036).
 
 Exit criteria:
-Different factions feel different without being simple +10% modifiers.
+Cultures and factions exist as simulation state distinct from settlements and geography. Feeling different in play (not +10% modifiers) remains later content.
 
 ## Phase 10 — Diplomacy
+
+Status: NEXT
 
 Goals:
 - trade;

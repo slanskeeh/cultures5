@@ -773,6 +773,84 @@ Phase 9 — Factions and Cultures. Do not start automatically.
 - Knowledge is about `ChunkCoordinate`. Do not re-key it to `ChunkId` without revisiting AD-024 / AD-079.
 - Debug HUD still shows real biome on the cursor line; that is developer truth, not player knowledge. Q overlay is the knowledge view.
 
+## 2026-09-17 — Task: Phase 9 Factions and Cultures
+
+### 1. Task
+Implement domain foundation for cultures and factions: identity, membership, deterministic generation, sparse relations. No diplomacy, war, trade, territory or resource system.
+
+### 2. Done
+- `FactionId`; `CultureId.Neutral` is a real Unaffiliated culture; generated cultures start at id 2.
+- `CultureState` + compact `CultureTraits`; `FactionState` references a culture; `HomeSettlement` seam unused.
+- Sparse `FactionRelationDirectory`, missing = Neutral; self-relations rejected; Friendly/Hostile stored once per unordered pair.
+- `CharacterState.Culture` / `Faction`; membership commands; member counts derived from the roster.
+- `FictionalName` from seed+id (not `Host.Random`); baseline 2 generated cultures + 3 factions.
+- Commands: CreateCulture/CreateFaction/AssignFactionMembership/AssignCulture/SetFactionRelation.
+- Mapper DTOs, envelope v2 unchanged.
+- Debug: P cycle faction, J join/leave, H cycle relation. Exploration keys unchanged.
+
+### 3. Working / Verified
+- 175/175 tests including culture/faction identity, determinism, membership, invalid refs, symmetric relations, LOD/exploration independence, mapper roundtrip. Phase 8 tests still pass.
+- Solution build 0 warnings / 0 errors.
+- Godot 4.7.2.stable.mono headless `--quit-after 45` exit 0. P/J/H were not clicked in a GUI session.
+
+### 4. Tests
+- `dotnet test tests/Cultures.Tests/Cultures.Tests.csproj -warnaserror` — 175/175 passing. Previously 166; +9 civilization tests.
+
+### 5. Bugs found
+- xUnit2000: `Assert.NotEqual` argument order on `0UL`.
+
+### 6. Bugs fixed
+- symptom: test project `-warnaserror` failed on xUnit2000
+  cause: actual/expected swapped
+  fix: `Assert.NotEqual(0UL, faction.Id.Value)`
+  regression test: same suite `-warnaserror`
+
+### 7. Known limitations / TODO
+- No diplomacy, treaties, war, trade, AI (Phase 10+).
+- No territory or claimed chunks (OD-035).
+- Names/traits are placeholder syllables (OD-032, OD-033).
+- Joining a faction does not change personal culture (OD-034).
+- No player faction select or visual identity (OD-038).
+- Not persisted in save envelope v2 (OD-036).
+- `CivilizationId` unused (OD-037).
+- HUD P/J/H not GUI-verified.
+
+### 8. Architecture decisions
+- AD-082 culture ≠ faction
+- AD-083 Neutral directory entry
+- AD-084 membership on character
+- AD-085 sparse symmetric relations
+- AD-086 no geographic ownership
+- AD-087 hashed names, not Host.Random
+- AD-088 persistence seam only
+- OD-032..OD-038 open
+
+### 9. Files changed
+- `src/Cultures.Domain/Civilization/**`
+- `src/Cultures.Domain/Core/Ids/EntityIds.cs`, `EntityIdFactory.cs`
+- `src/Cultures.Domain/Population/CharacterState.cs`, `CharacterCreation.cs`
+- `src/Cultures.Domain/Application/SimulationHost.cs`
+- `src/Cultures.Domain/Application/Persistence/CivilizationRecords.cs`
+- `presentation/Main.cs`, `Main.tscn`
+- `tests/Cultures.Tests/CivilizationTests.cs`, `EntityIdTests.cs`
+- `docs/DECISIONS.md`, `docs/MVP_ROADMAP.md`, `docs/WORLD_ARCHITECTURE.md`, `docs/SIMULATION_ARCHITECTURE.md`, `docs/ARCHITECTURE.md`, `docs/DEVELOPMENT_LOG.md`
+
+### 10. Current project health
+- Build: working, 0 warnings, 0 errors
+- Tests: 175/175 passing
+- Runtime: headless Main boots
+- Known broken areas: none identified; faction HUD not GUI-verified
+
+### 11. Next step
+Phase 10 — Diplomacy. Do not start automatically.
+
+### 12. Notes for ChatGPT
+- Do not implement treaties/war because Friendly/Hostile stances exist.
+- Do not treat `CivilizationId` as a faction.
+- Do not make factions own chunks or reveal exploration.
+- Default people stay Neutral / no faction; debug J assigns membership.
+- Do not consume `SimulationHost.Random` for culture generation.
+
 
 
 

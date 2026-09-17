@@ -44,6 +44,8 @@ public sealed class EntityIdTests
         Assert.Equal(1UL, first.Value);
         Assert.Equal(2UL, second.Value);
         Assert.NotEqual((ulong)Array.IndexOf(discarded, second), second.Value);
+        Assert.Equal(2UL, factory.NextCulture().Value);
+        Assert.Equal(1UL, factory.NextFaction().Value);
     }
 
     [Fact]
@@ -65,5 +67,7 @@ public sealed class EntityIdTests
         Assert.True(new SettlementId(1).IsAssigned);
         Assert.True(CultureId.Neutral.IsAssigned);
         Assert.NotEqual(CultureId.None, CultureId.Neutral);
+        Assert.False(FactionId.None.IsAssigned);
+        Assert.True(new FactionId(1).IsAssigned);
     }
 }

@@ -52,7 +52,8 @@ Identity
 - id
 - name
 - age
-- culture
+- `CultureId` (Phase 9; default Neutral / Unaffiliated)
+- `FactionId` (Phase 9; default none)
 - appearance seed
 
 Social
@@ -223,7 +224,8 @@ A settlement has:
 - derived wrap-aware core;
 - lifecycle (Emerging / Established / Declining / Abandoned);
 - derived membership and statistics;
-- optional future `CultureId` / `Leader` seams.
+- `CultureId` (default Neutral until assigned);
+- optional `Leader` seam.
 
 A settlement may later:
 - grow;
@@ -236,6 +238,8 @@ A settlement may later:
 Split, merge, migration, politics, taxation, and trade are not implemented in Phase 6.
 
 Abandoned identity is kept. Re-inhabitation currently creates a new `SettlementId` (OD-018).
+
+Phase 9 adds `CivilizationSystem`: cultures and factions are social entities, not settlements. Membership is on `CharacterState`. Relations are sparse symmetric stances without diplomacy behavior. Factions do not claim chunks.
 
 ## 13. Politics
 

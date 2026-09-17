@@ -163,6 +163,8 @@ Rumored does not sample geography. Scouted and above may generate that one chunk
 
 Tile-level fog, landmarks and the player map are not in Phase 8.
 
+Factions and cultures are not geography. A faction does not own chunks where its members stand. Creating a faction does not reveal exploration knowledge.
+
 ## 12. Rendering
 
 The desired visual direction is:

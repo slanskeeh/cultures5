@@ -90,7 +90,8 @@ public sealed class CharacterCreation
         {
             AgeYears = SkillRules.NewbornAgeYears,
             LifeStage = CharacterAgingSystem.StageFor(SkillRules.NewbornAgeYears),
-            Name = $"Child {id.Value}"
+            Name = $"Child {id.Value}",
+            Culture = first.Culture
         };
 
         if (!child.FamilyLinks.TryAddParent(first.Id) || !first.FamilyLinks.TryAddChild(id))

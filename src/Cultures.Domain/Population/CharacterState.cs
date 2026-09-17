@@ -24,6 +24,8 @@ public sealed class CharacterState
         Family = FamilyId.None;
         Household = HouseholdId.None;
         Settlement = SettlementId.None;
+        Culture = CultureId.Neutral;
+        Faction = FactionId.None;
         AssignedWorkplace = WorkplaceId.None;
     }
 
@@ -43,6 +45,8 @@ public sealed class CharacterState
     public FamilyId Family { get; set; }
     public HouseholdId Household { get; set; }
     public SettlementId Settlement { get; set; }
+    public CultureId Culture { get; set; }
+    public FactionId Faction { get; set; }
     public SimulationLodTier LodTier { get; set; } = SimulationLodTier.Full;
     public bool IsPersistentIndividual { get; set; }
     public bool IsPlayerCommanded { get; set; }

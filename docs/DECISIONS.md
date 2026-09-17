@@ -933,6 +933,69 @@ Exploration commands do not change LOD tier, presentation presence, settlement s
 Reason:
 Four concerns: world, simulation, knowledge, presentation.
 
+## AD-082 — Culture and Faction are distinct entities
+
+Status: Accepted
+
+`CultureState` is a shared identity with compact `CultureTraits` data. `FactionState` is an organized group that references a `CultureId`. Neither inherits from `SettlementState`. A culture may exist without a faction. `CivilizationId` remains an unused later seam.
+
+Reason:
+Faction is not a culture and not a settlement.
+
+## AD-083 — Neutral is the unaffiliated default culture
+
+Status: Accepted
+
+`CultureId.Neutral` (value 1) is a real directory entry named `Unaffiliated`. Generated cultures use `EntityIdFactory.NextCulture()` starting at 2. Spawned people and new settlements still default to Neutral. Debug baseline also creates two generated cultures and three factions.
+
+Reason:
+Keep the Phase 6 Neutral seam as a valid identity instead of a magic missing value.
+
+## AD-084 — Faction membership lives on the character
+
+Status: Accepted
+
+`CharacterState.Faction` and `CharacterState.Culture` are authoritative. Member lists and counts are derived from the roster. Joining a faction does not copy that faction's culture (OD-034). Newborns inherit the first parent's culture and start with `FactionId.None`.
+
+Reason:
+Do not duplicate population onto the faction object. Affiliation is not UI state.
+
+## AD-085 — Faction relations are symmetric and sparse
+
+Status: Accepted
+
+`FactionRelationDirectory` stores unordered pairs `(minId, maxId)`. Missing means Neutral. Self-relations are rejected. Neutral is not stored. Stance values are Neutral / Friendly / Hostile data only — no diplomacy behavior.
+
+Reason:
+Avoid duplicate A→B / B→A state and order-dependent bugs.
+
+## AD-086 — Factions do not own geography
+
+Status: Accepted
+
+A faction has an optional `HomeSettlement` seam defaulting to none. Creating or joining a faction does not reveal chunks, mutate exploration, assign territory, or own every chunk where members stand.
+
+Reason:
+World is geography; factions are social entities.
+
+## AD-087 — Culture and faction names are hashed, not Host.Random
+
+Status: Accepted (temporary generator)
+
+`FictionalName` mixes world seed + entity id into invented syllables and trait bytes. It does not consume `SimulationHost.Random` and does not use real-world culture names.
+
+Reason:
+Generation must be deterministic without shifting later RNG sequences.
+
+## AD-088 — Civilization persistence is a mapper seam only
+
+Status: Accepted (temporary)
+
+`CultureRecord` / `FactionRecord` / `FactionRelationRecord` exist. Save envelope remains v2 and does not store civilizations.
+
+Reason:
+Do not pretend a full save exists.
+
 ## OD-023 — Exact LOD radii and cadences
 
 **Status:** Open
@@ -986,3 +1049,45 @@ Phase 8 writes knowledge only through debug/application commands (R/S/D/F/A). Tr
 **Status:** Open
 
 Q overlay is a debug visualization. It is not the player map, atlas or final fog art.
+
+## OD-032 — Culture naming and language
+
+**Status:** Open
+
+Phase 9 syllable names are a placeholder. There is no language family content, grammar, or person-name generator.
+
+## OD-033 — Baseline culture and faction counts
+
+**Status:** Open
+
+Debug worlds currently seed 1 unaffiliated + 2 generated cultures and 3 factions. Not a final new-game setup.
+
+## OD-034 — Personal culture versus faction culture
+
+**Status:** Open
+
+Joining a faction does not overwrite `CharacterState.Culture`. Whether members should adopt the faction culture is undecided.
+
+## OD-035 — Faction home and territory
+
+**Status:** Open
+
+`HomeSettlement` is an unused seam. Borders, claimed chunks and resource ownership are not implemented.
+
+## OD-036 — Persisting civilizations in the save envelope
+
+**Status:** Open
+
+Mapper DTOs exist. Envelope v2 does not include cultures, factions, relations or character affiliation.
+
+## OD-037 — CivilizationId versus FactionId
+
+**Status:** Open
+
+Phase 9 political groups are `FactionId`. What a future `CivilizationId` means (umbrella of factions, player-level polity, or unused leftover) is not decided.
+
+## OD-038 — Player faction selection
+
+**Status:** Open
+
+There is no new-game faction pick, visual identity, or cultural production modifiers. Debug P/J/H only inspect and assign.

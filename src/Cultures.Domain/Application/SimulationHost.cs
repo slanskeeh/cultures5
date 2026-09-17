@@ -1,5 +1,6 @@
 using Cultures.Application.Persistence;
 using Cultures.Buildings;
+using Cultures.Civilization;
 using Cultures.Core.Commands;
 using Cultures.Core.Events;
 using Cultures.Core.Ids;
@@ -70,6 +71,8 @@ public sealed class SimulationHost
         Settlements = new SettlementDirectory();
         SettlementDetection = new SettlementSystem(World, Population, Buildings, Settlements, Ids, Events, Clock, Recipes);
         Exploration = new ExplorationSystem(World, Clock, Events);
+        Civilization = new CivilizationSystem(worldSeed, Ids, Population, Events, Clock);
+        Civilization.SeedBaseline();
 
         Commands.Register(new PingCommandHandler());
         Commands.Register(new MoveDebugCursorHandler(Cursor));
@@ -90,6 +93,11 @@ public sealed class SimulationHost
         Commands.Register(new MapChunkHandler(Exploration));
         Commands.Register(new ConfirmChunkHandler(Exploration));
         Commands.Register(new AnalyzeChunkHandler(Exploration));
+        Commands.Register(new CreateCultureHandler(Civilization));
+        Commands.Register(new CreateFactionHandler(Civilization));
+        Commands.Register(new AssignFactionMembershipHandler(Civilization));
+        Commands.Register(new AssignCultureHandler(Civilization));
+        Commands.Register(new SetFactionRelationHandler(Civilization));
     }
 
     public ulong WorldSeed { get; }
@@ -114,6 +122,7 @@ public sealed class SimulationHost
     public AggregateSimulation Aggregate { get; }
     public LodSystem Lod { get; }
     public ExplorationSystem Exploration { get; }
+    public CivilizationSystem Civilization { get; }
 
     public ulong Step(ulong ticks)
     {

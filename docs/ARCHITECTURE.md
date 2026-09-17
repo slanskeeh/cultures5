@@ -81,6 +81,8 @@ CharacterId
 FamilyId
 BuildingId
 SettlementId
+CultureId
+FactionId
 CivilizationId
 RegionId
 ChunkId

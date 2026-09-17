@@ -1,7 +1,9 @@
 using Cultures.Application;
 using Cultures.Buildings;
+using Cultures.Civilization;
 using Cultures.Economy;
 using Cultures.Core.Commands;
+using Cultures.Core.Ids;
 using Cultures.Exploration;
 using Cultures.Population;
 using Cultures.Settlement;
@@ -27,6 +29,7 @@ public partial class Main : Control
     private int _selectedIndex;
     private int _selectedBuildingIndex;
     private int _selectedSettlementIndex;
+    private int _selectedFactionIndex;
 
     public override void _Ready()
     {
@@ -126,6 +129,15 @@ public partial class Main : Control
             case Key.Q:
                 _map.ShowExploration = !_map.ShowExploration;
                 _lastCommand = _map.ShowExploration ? "exploration overlay on" : "exploration overlay off";
+                break;
+            case Key.P:
+                CycleFaction();
+                break;
+            case Key.J:
+                DebugJoinFaction();
+                break;
+            case Key.H:
+                DebugCycleRelation();
                 break;
             default:
                 return;
@@ -302,6 +314,47 @@ public partial class Main : Control
             : result.Error ?? "explore failed";
     }
 
+    private void CycleFaction()
+    {
+        if (_host.Civilization.Factions.Count == 0)
+            return;
+        _selectedFactionIndex = (_selectedFactionIndex + 1) % _host.Civilization.Factions.Count;
+        var faction = _host.Civilization.Factions[_selectedFactionIndex];
+        _lastCommand = $"inspect {faction.Id} {faction.Name}";
+    }
+
+    private void DebugJoinFaction()
+    {
+        if (_host.Population.Count == 0 || _host.Civilization.Factions.Count == 0)
+            return;
+        var person = _host.Population[_selectedIndex];
+        var faction = _host.Civilization.Factions[_selectedFactionIndex % _host.Civilization.Factions.Count];
+        var target = person.Faction == faction.Id ? FactionId.None : faction.Id;
+        var result = _host.Commands.Execute(new AssignFactionMembershipCommand(person.Id, target));
+        _lastCommand = result.Success
+            ? $"{person.Id} faction {target}"
+            : result.Error ?? "membership failed";
+    }
+
+    private void DebugCycleRelation()
+    {
+        if (_host.Civilization.Factions.Count < 2)
+            return;
+        var left = _host.Civilization.Factions[_selectedFactionIndex % _host.Civilization.Factions.Count];
+        var right = _host.Civilization.Factions[(_selectedFactionIndex + 1) % _host.Civilization.Factions.Count];
+        var current = _host.Civilization.RelationOf(left.Id, right.Id);
+        var next = current switch
+        {
+            FactionRelationStance.Neutral => FactionRelationStance.Friendly,
+            FactionRelationStance.Friendly => FactionRelationStance.Hostile,
+            _ => FactionRelationStance.Neutral
+        };
+        var result = _host.Commands.Execute(new SetFactionRelationCommand(left.Id, right.Id, next));
+        _lastCommand = result.Success
+            ? $"{left.Name} ↔ {right.Name} {next}"
+            : result.Error ?? "relation failed";
+    }
+
     private void DebugEvaluateSettlements()
     {
         var result = _host.Commands.Execute(new EvaluateSettlementsCommand());
@@ -348,7 +401,7 @@ public partial class Main : Control
             : $"{selected.Id} {selected.LifeStage} age {selected.AgeYears:0.0}  {selected.Position}  " +
               $"hunger {selected.Needs.Hunger:0.00}  fatigue {selected.Needs.Fatigue:0.00}  " +
               $"food {selected.Inventory.GetQuantity(ResourceType.Food)}  {selected.Activity.Kind}  " +
-              $"work {workplace}  {selected.Settlement}  lod {selected.LodTier}";
+              $"work {workplace}  {selected.Settlement}  {selected.Culture}  {selected.Faction}  lod {selected.LodTier}";
         var familyLine = selected is null
             ? ""
             : $"parents {string.Join(",", selected.FamilyLinks.Parents.Select(id => id.Value.ToString()))}  " +
@@ -401,8 +454,24 @@ public partial class Main : Control
         var explorationLine =
             $"explore {knowledge.Level}  {chunk.Chunk}  facts {known}  known-chunks {_host.Exploration.Knowledge.Count}";
 
+        var selectedFaction = _host.Civilization.Factions.Count > 0
+            ? _host.Civilization.Factions[_selectedFactionIndex % _host.Civilization.Factions.Count]
+            : null;
+        var otherFaction = _host.Civilization.Factions.Count > 1
+            ? _host.Civilization.Factions[(_selectedFactionIndex + 1) % _host.Civilization.Factions.Count]
+            : null;
+        _host.Civilization.Cultures.TryGet(selectedFaction?.Culture ?? CultureId.Neutral, out var factionCulture);
+        var factionLine = selectedFaction is null
+            ? $"cultures {_host.Civilization.Cultures.Count}  no factions"
+            : $"cultures {_host.Civilization.Cultures.Count}  factions {_host.Civilization.Factions.Count}  " +
+              $"{selectedFaction.Id} {selectedFaction.Name}  cult {factionCulture?.Name ?? selectedFaction.Culture.ToString()}  " +
+              $"members {_host.Civilization.CountMembers(selectedFaction.Id)}  home {selectedFaction.HomeSettlement}";
+        var relationLine = selectedFaction is null || otherFaction is null
+            ? "no relation"
+            : $"{selectedFaction.Name} ↔ {otherFaction.Name}  {_host.Civilization.RelationOf(selectedFaction.Id, otherFaction.Id)}";
+
         _label.Text =
-            "CULTURES — PHASE 8  exploration knowledge\n" +
+            "CULTURES — PHASE 9  factions and cultures\n" +
             $"{paused}   seed {_host.WorldSeed}   people {_host.Population.Alive.Count()}/{_host.Population.Count}   " +
             $"buildings {_host.Buildings.Count}   settlements {_host.Settlements.Count}   tick {date.Tick}\n" +
             $"cursor {cursor}   {chunk}   {terrain.Biome} {water} elev {terrain.Elevation:0.00}\n" +
@@ -413,9 +482,11 @@ public partial class Main : Control
             $"{settlementLine}\n" +
             $"{lodLine}\n" +
             $"{explorationLine}\n" +
+            $"{factionLine}\n" +
+            $"{relationLine}\n" +
             $"last: {_lastCommand}\n" +
             "Arrows cursor   Tab person   C follow   B/V building   M/U settlement   E detect   L lod   O refresh   9 agg  0 full\n" +
-            "Q explore overlay   R rumor   S scout   D map   F confirm   A analyze   N child   T teach   K skill   G mark   Space";
+            "P faction   J join   H relation   Q explore overlay   R rumor   S scout   D map   F confirm   A analyze   N child   T teach   K skill   G mark   Space";
 
         _map.QueueRedraw();
     }
