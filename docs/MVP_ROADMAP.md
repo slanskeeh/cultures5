@@ -161,20 +161,30 @@ World can contain substantially more inhabitants than the fully detailed simulat
 
 ## Phase 8 — Exploration
 
-Status: NEXT
+Status: COMPLETED
 
-Goals:
-- fog/unknown world;
-- scouting;
-- maps;
-- discoveries;
-- landmarks;
-- reports.
+Delivered:
+- world state ≠ player knowledge (`ExplorationSystem` + sparse `ExplorationKnowledgeDirectory`);
+- monotonic Unknown → Rumored → Scouted → Mapped → Confirmed → Analyzed;
+- chunk-level compositional facts (terrain / biome / climate);
+- debug commands R/S/D/F/A and overlay Q (not expeditions);
+- wrap-adjacent chunks remain independent records;
+- independence from LOD, presentation and generated geography;
+- save DTO seam (`ExplorationKnowledgeRecord`) not wired into envelope v2.
+
+Not done (later / open):
+- visibility radius, travel/scout gameplay, expeditions, explorer profession (OD-026, OD-029);
+- tile-level knowledge, landmarks, rivers (OD-028);
+- rumor provenance (OD-030);
+- final fog/player map (OD-031);
+- persisting knowledge in the save envelope.
 
 Exit criteria:
-Exploration produces persistent knowledge and meaningful decisions.
+Exploration produces persistent in-memory knowledge independent of the actual world. Meaningful strategic decisions from that knowledge remain later phases.
 
 ## Phase 9 — Factions and Cultures
+
+Status: NEXT
 
 Goals:
 - player faction selection;

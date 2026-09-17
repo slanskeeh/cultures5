@@ -873,6 +873,66 @@ Status: Accepted (temporary)
 Reason:
 Prepare for migration without implementing it.
 
+## AD-076 — World state is not player knowledge
+
+Status: Accepted
+
+Geography, simulation LOD and presentation do not imply exploration knowledge. A forest exists whether the player knows it. A chunk may be Analyzed while Aggregate, Unknown while Full, or known while Unloaded in Godot.
+
+Reason:
+Fog/show-terrain is presentation. Knowledge is a separate domain.
+
+## AD-077 — Sparse exploration directory
+
+Status: Accepted
+
+`ExplorationKnowledgeDirectory` stores only chunks that have left Unknown. A missing record is Unknown. It is not a planet-sized array and is not the terrain generation cache.
+
+Reason:
+Same sparse philosophy as `ChunkSimulationDirectory` (AD-068).
+
+## AD-078 — Knowledge progression is monotonic
+
+Status: Accepted
+
+Levels: Unknown → Rumored → Scouted → Mapped → Confirmed → Analyzed. Commands never decrease knowledge. Already-at-target fails. Allowed advances in Phase 8:
+
+- Rumored only from Unknown
+- Scouted from Unknown or Rumored
+- Mapped only from Scouted
+- Confirmed only from Mapped
+- Analyzed only from Confirmed
+
+Reason:
+Later systems must not accidentally wipe discoveries.
+
+## AD-079 — Phase 8 knowledge is chunk-level and spatial
+
+Status: Accepted (temporary grain)
+
+`ChunkExplorationKnowledge` is keyed by `ChunkCoordinate` (lattice cell), not `ChunkId`. `PersistentChunk` is an unused seam. Facts are compositional (`TerrainKnowledge` / `BiomeKnowledge` / `ClimateKnowledge`). `DiscoveryNote` / `DiscoveryKind` exist but are not populated.
+
+Reason:
+Player knowledge is about a place on the wrap-aware grid (AD-024). Tile-level fog is future (OD-028).
+
+## AD-080 — Wrap-adjacent chunks are independent knowledge records
+
+Status: Accepted
+
+Horizontal wrap does not merge knowledge. Chunk X=0 and X=last are neighbors in Chebyshev distance and still have separate records. Commands require in-range chunk coordinates; Y does not wrap.
+
+Reason:
+Wrap is topology, not identity of a place.
+
+## AD-081 — Exploration does not own LOD, presentation or geography
+
+Status: Accepted
+
+Exploration commands do not change LOD tier, presentation presence, settlement state or generated terrain values. Rumored does not sample/generate the chunk. Scouted and above sample that one chunk via `WorldGenerator.GetChunk` (cache fill is not a geography mutation). Debug overlay Q paints from the knowledge directory; overlay off may still show raw debug terrain.
+
+Reason:
+Four concerns: world, simulation, knowledge, presentation.
+
 ## OD-023 — Exact LOD radii and cadences
 
 **Status:** Open
@@ -890,3 +950,39 @@ Phase 7 keeps every `CharacterState` even when aggregated. Whether distant ordin
 **Status:** Open
 
 Bulk hunger/aging/farm cycles and optional macro births are placeholders, not final economy.
+
+## OD-026 — Exploration visibility radius
+
+**Status:** Open
+
+Phase 8 advances the cursor chunk only. There is no scout radius, vision cone or travel-based reveal.
+
+## OD-027 — Scouted / Mapped / Confirmed / Analyzed fact split
+
+**Status:** Open
+
+Current provisional facts: Rumored none; Scouted land/water; Mapped + dominant biome / mean elevation / distinct biomes; Confirmed + climate means; Analyzed + land/water cell counts. Not final design.
+
+## OD-028 — Tile-level exploration knowledge
+
+**Status:** Open
+
+Phase 8 is chunk-level only. Per-cell fog, rivers and landmarks are not represented.
+
+## OD-029 — Exploration sources beyond debug commands
+
+**Status:** Open
+
+Phase 8 writes knowledge only through debug/application commands (R/S/D/F/A). Travel, scouts, maps, trade and diplomacy are not sources yet. `ExplorationSource` is a last-writer tag, not a history log.
+
+## OD-030 — Rumor provenance
+
+**Status:** Open
+
+`Rumored` stores no narrative, informant or reliability. Whether rumors should keep source/provenance is undecided.
+
+## OD-031 — Final fog-of-war and player map
+
+**Status:** Open
+
+Q overlay is a debug visualization. It is not the player map, atlas or final fog art.

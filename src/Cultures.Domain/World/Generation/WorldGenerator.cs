@@ -20,6 +20,7 @@ public sealed class WorldGenerator
     public WorldConfiguration Configuration { get; }
     public ChunkLayout Chunks { get; }
     public int CachedChunkCount => _chunks.Count;
+    public bool IsCached(ChunkCoordinate chunk) => _chunks.ContainsKey(chunk);
     internal ulong NoiseSeed { get; }
 
     public GeneratedTerrain Sample(LogicalGridCoordinate cell)

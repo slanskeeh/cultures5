@@ -149,13 +149,19 @@ Knowledge is separate from geography.
 
 The world can contain a resource without the player knowing it exists.
 
-Discovery state examples:
+Phase 8 stores player knowledge in `ExplorationKnowledgeDirectory`. Missing entries are Unknown. Knowledge is keyed by `ChunkCoordinate`, not by terrain cache or `ChunkId`.
+
+Discovery state:
 Unknown
 → Rumored
 → Scouted
 → Mapped
 → Confirmed
 → Analyzed
+
+Rumored does not sample geography. Scouted and above may generate that one chunk on demand to copy facts; they do not rewrite elevation/biome. Wrap-adjacent chunks (X=0 and X=last) are separate knowledge records.
+
+Tile-level fog, landmarks and the player map are not in Phase 8.
 
 ## 12. Rendering
 

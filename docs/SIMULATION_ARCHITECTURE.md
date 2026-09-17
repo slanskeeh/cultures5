@@ -328,6 +328,8 @@ At Aggregate/Macro, `CharacterSimulation` skips those people. Bulk steps apply h
 
 When detail resumes, the same `CharacterId`s continue. Census on `ChunkSimulationState` is derived, not a second inventory.
 
+Exploration knowledge is not a LOD concern. A chunk may be Analyzed while Aggregate, or Unknown while Full. `ExplorationSystem` does not classify or mutate simulation tiers.
+
 ## 18. Save/load
 
 Every mutable system must define serialization.

@@ -1,6 +1,8 @@
 using Cultures.Application;
 using Cultures.Buildings;
 using Cultures.Economy;
+using Cultures.Core.Commands;
+using Cultures.Exploration;
 using Cultures.Population;
 using Cultures.Settlement;
 using Cultures.World;
@@ -105,6 +107,25 @@ public partial class Main : Control
                 break;
             case Key.Key0:
                 DebugForceLod(SimulationLodTier.Full);
+                break;
+            case Key.R:
+                DebugExplore(ExplorationKnowledgeLevel.Rumored);
+                break;
+            case Key.S:
+                DebugExplore(ExplorationKnowledgeLevel.Scouted);
+                break;
+            case Key.D:
+                DebugExplore(ExplorationKnowledgeLevel.Mapped);
+                break;
+            case Key.F:
+                DebugExplore(ExplorationKnowledgeLevel.Confirmed);
+                break;
+            case Key.A:
+                DebugExplore(ExplorationKnowledgeLevel.Analyzed);
+                break;
+            case Key.Q:
+                _map.ShowExploration = !_map.ShowExploration;
+                _lastCommand = _map.ShowExploration ? "exploration overlay on" : "exploration overlay off";
                 break;
             default:
                 return;
@@ -258,6 +279,29 @@ public partial class Main : Control
         _lastCommand = result.Success ? $"chunk {address.Chunk} → {tier}" : result.Error ?? "lod force failed";
     }
 
+    private void DebugExplore(ExplorationKnowledgeLevel target)
+    {
+        if (!_host.World.Chunks.TryResolve(_host.Cursor.Position.ToWorld(), out var address))
+        {
+            _lastCommand = "cursor is outside the world";
+            return;
+        }
+
+        ICommand command = target switch
+        {
+            ExplorationKnowledgeLevel.Rumored => new RumorChunkCommand(address.Chunk),
+            ExplorationKnowledgeLevel.Scouted => new ScoutChunkCommand(address.Chunk),
+            ExplorationKnowledgeLevel.Mapped => new MapChunkCommand(address.Chunk),
+            ExplorationKnowledgeLevel.Confirmed => new ConfirmChunkCommand(address.Chunk),
+            ExplorationKnowledgeLevel.Analyzed => new AnalyzeChunkCommand(address.Chunk),
+            _ => new ScoutChunkCommand(address.Chunk)
+        };
+        var result = _host.Commands.Execute(command);
+        _lastCommand = result.Success
+            ? $"{address.Chunk} {target}"
+            : result.Error ?? "explore failed";
+    }
+
     private void DebugEvaluateSettlements()
     {
         var result = _host.Commands.Execute(new EvaluateSettlementsCommand());
@@ -347,8 +391,18 @@ public partial class Main : Control
             $"food {census?.Food ?? 0}/{totals.Food} wood {totals.Wood} stone {totals.Stone}  " +
             $"mig {census?.MigrationPressure ?? 0}";
 
+        var knowledge = _host.Exploration.GetKnowledge(chunk.Chunk);
+        var facts = _host.Exploration.GetKnownFacts(chunk.Chunk);
+        var known = facts.Level == ExplorationKnowledgeLevel.Unknown
+            ? "none"
+            : $"land {facts.Terrain.HasLand} water {facts.Terrain.HasWater}" +
+              (facts.Biome.Known ? $" biome {facts.Biome.Dominant}" : "") +
+              (facts.Climate.Known ? $" t {facts.Climate.Temperature:0.00}" : "");
+        var explorationLine =
+            $"explore {knowledge.Level}  {chunk.Chunk}  facts {known}  known-chunks {_host.Exploration.Knowledge.Count}";
+
         _label.Text =
-            "CULTURES — PHASE 7  simulation LOD\n" +
+            "CULTURES — PHASE 8  exploration knowledge\n" +
             $"{paused}   seed {_host.WorldSeed}   people {_host.Population.Alive.Count()}/{_host.Population.Count}   " +
             $"buildings {_host.Buildings.Count}   settlements {_host.Settlements.Count}   tick {date.Tick}\n" +
             $"cursor {cursor}   {chunk}   {terrain.Biome} {water} elev {terrain.Elevation:0.00}\n" +
@@ -358,9 +412,10 @@ public partial class Main : Control
             $"{buildingLine}\n" +
             $"{settlementLine}\n" +
             $"{lodLine}\n" +
+            $"{explorationLine}\n" +
             $"last: {_lastCommand}\n" +
-            "Arrows cursor   Tab person   C follow   B/V building   M/U settlement   E detect   L lod   O refresh   9 agg  0 full   N child   T teach   K skill   G mark   Space pause\n" +
-            "F farm  S storage  H house  W workshop";
+            "Arrows cursor   Tab person   C follow   B/V building   M/U settlement   E detect   L lod   O refresh   9 agg  0 full\n" +
+            "Q explore overlay   R rumor   S scout   D map   F confirm   A analyze   N child   T teach   K skill   G mark   Space";
 
         _map.QueueRedraw();
     }

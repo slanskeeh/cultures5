@@ -689,6 +689,90 @@ Phase 8 — Exploration. Do not start automatically.
 - Do not implement migration because `MigrationGroup` exists.
 - Classification uses the debug cursor, not FPS. `E` is settlements; `O` is LOD refresh.
 
+## 2026-09-17 — Task: Phase 8 Exploration
+
+### 1. Task
+Implement player knowledge of the world as a domain separate from geography, LOD and presentation. Chunk-level monotonic exploration, sparse storage, debug commands, wrap-aware independence. No expeditions.
+
+### 2. Done
+- `ExplorationKnowledgeLevel` Unknown→Analyzed; sparse `ExplorationKnowledgeDirectory` (missing = Unknown).
+- Compositional facts: `TerrainKnowledge` / `BiomeKnowledge` / `ClimateKnowledge`. Rumored stores no geography.
+- `ExplorationSystem.TryAdvance` + commands Rumor/Scout/Map/Confirm/Analyze. Scout may skip Rumored; illegal transitions fail; knowledge never decreases.
+- `ExplorationSampler` reads one chunk via `WorldGenerator.GetChunk` only at Scouted+.
+- Knowledge keyed by `ChunkCoordinate`; `ChunkId PersistentChunk` unused seam; `DiscoveryKind` unused seam.
+- `ExplorationKnowledgeRecord` mapper seam, not wired into save envelope v2.
+- Debug: R rumor, S scout, D map, F confirm, A analyze, Q overlay. Overlay paints from knowledge (Unknown/Rumored do not leak biome). Overlay off still shows raw debug terrain.
+- HUD line for cursor-chunk knowledge. M/C/O unchanged.
+
+### 3. Working / Verified
+- 166/166 tests including progression, illegal transitions, rumor-does-not-generate, LOD/presentation independence, terrain independence, settlement directory, wrap, determinism, mapper roundtrip, sparse storage.
+- Solution build 0 warnings / 0 errors.
+- Godot 4.7.2.stable.mono headless `--quit-after 45` exit 0. Overlay keys were not clicked in a GUI session.
+
+### 4. Tests
+- `dotnet test tests/Cultures.Tests/Cultures.Tests.csproj -warnaserror` — 166/166 passing. Previously 155; +11 exploration tests.
+
+### 5. Bugs found
+- Command handlers called unqualified `Advance` (`CS0103`); helper lived on `ExplorationCommandSupport`.
+- Overlay first used biome from `GetCell` for known chunks, leaking geography for Rumored.
+- `ToAddress`/`TryGetCell` mixed `WorldCoordinate` and `LogicalGridCoordinate` after the overlay rewrite.
+
+### 6. Bugs fixed
+- symptom: compile CS0103 in `ExplorationCommands.cs`
+  cause: `Advance` not in handler scope
+  fix: `ExplorationCommandSupport.Advance(...)`
+  regression test: solution `-warnaserror`
+- symptom: Rumored overlay would tint real biome
+  cause: lerp on `ColorFor(terrain)`
+  fix: Q overlay colors from `GetKnownFacts` only; skip `GetCell` while overlay is on
+  regression test: none GUI; domain rumor test asserts no cache fill
+- symptom: CS1503 on debug map
+  cause: `HorizontallyNormalized` is `WorldCoordinate`
+  fix: `resolution.TryGetCell` + `Grid.GetCell(LogicalGridCoordinate)`
+
+### 7. Known limitations / TODO
+- No visibility radius; only the cursor chunk (OD-026).
+- Fact split Scouted/Mapped/Confirmed/Analyzed is provisional (OD-027).
+- No tile-level knowledge, landmarks, rivers (OD-028).
+- No travel/expedition/explorer sources (OD-029).
+- Rumors have no provenance (OD-030).
+- Q is debug fog, not the player map (OD-031).
+- Knowledge is not persisted in save envelope v2 (mapper only).
+- Mapper omits Analyzed land/water cell counts and distinct biome count.
+
+### 8. Architecture decisions
+- AD-076 world ≠ knowledge
+- AD-077 sparse directory
+- AD-078 monotonic progression
+- AD-079 chunk-level spatial key
+- AD-080 wrap-adjacent independence
+- AD-081 LOD/presentation/geography independence
+- OD-026..OD-031 open
+
+### 9. Files changed
+- `src/Cultures.Domain/Exploration/**`
+- `src/Cultures.Domain/Application/Persistence/ExplorationKnowledgeRecord.cs`
+- `src/Cultures.Domain/Application/SimulationHost.cs`
+- `src/Cultures.Domain/World/Generation/WorldGenerator.cs` (`IsCached`)
+- `presentation/Main.cs`, `Main.tscn`, `WorldDebugMap.cs`
+- `tests/Cultures.Tests/ExplorationTests.cs`
+- `docs/DECISIONS.md`, `docs/MVP_ROADMAP.md`, `docs/WORLD_ARCHITECTURE.md`, `docs/SIMULATION_ARCHITECTURE.md`, `docs/DEVELOPMENT_LOG.md`
+
+### 10. Current project health
+- Build: working, 0 warnings, 0 errors
+- Tests: 166/166 passing
+- Runtime: headless Main boots
+- Known broken areas: none identified; exploration overlay not GUI-verified
+
+### 11. Next step
+Phase 9 — Factions and Cultures. Do not start automatically.
+
+### 12. Notes for ChatGPT
+- Do not add expeditions or an explorer profession because `ScoutChunkCommand` exists.
+- Do not treat Q overlay as the final map.
+- Knowledge is about `ChunkCoordinate`. Do not re-key it to `ChunkId` without revisiting AD-024 / AD-079.
+- Debug HUD still shows real biome on the cursor line; that is developer truth, not player knowledge. Q overlay is the knowledge view.
+
 
 
 

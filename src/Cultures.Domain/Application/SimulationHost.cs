@@ -5,6 +5,7 @@ using Cultures.Core.Events;
 using Cultures.Core.Ids;
 using Cultures.Core.Randomness;
 using Cultures.Core.Time;
+using Cultures.Exploration;
 using Cultures.Population;
 using Cultures.Settlement;
 using Cultures.World;
@@ -68,6 +69,7 @@ public sealed class SimulationHost
         Characters = new CharacterSimulation(World, Population, Clock, Events, Production, Teaching, Lod);
         Settlements = new SettlementDirectory();
         SettlementDetection = new SettlementSystem(World, Population, Buildings, Settlements, Ids, Events, Clock, Recipes);
+        Exploration = new ExplorationSystem(World, Clock, Events);
 
         Commands.Register(new PingCommandHandler());
         Commands.Register(new MoveDebugCursorHandler(Cursor));
@@ -83,6 +85,11 @@ public sealed class SimulationHost
         Commands.Register(new ClearChunkLodOverrideHandler(Lod));
         Commands.Register(new ProtectCharacterHandler(Population, Lod));
         Commands.Register(new SetChunkPresentationHandler(Lod));
+        Commands.Register(new RumorChunkHandler(Exploration));
+        Commands.Register(new ScoutChunkHandler(Exploration));
+        Commands.Register(new MapChunkHandler(Exploration));
+        Commands.Register(new ConfirmChunkHandler(Exploration));
+        Commands.Register(new AnalyzeChunkHandler(Exploration));
     }
 
     public ulong WorldSeed { get; }
@@ -106,6 +113,7 @@ public sealed class SimulationHost
     public SettlementSystem SettlementDetection { get; }
     public AggregateSimulation Aggregate { get; }
     public LodSystem Lod { get; }
+    public ExplorationSystem Exploration { get; }
 
     public ulong Step(ulong ticks)
     {

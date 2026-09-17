@@ -1,6 +1,7 @@
 using Cultures.Application;
 using Cultures.Buildings;
 using Cultures.Core.Ids;
+using Cultures.Exploration;
 using Cultures.Population;
 using Cultures.Settlement;
 using Cultures.World;
@@ -52,17 +53,27 @@ public partial class WorldDebugMap : Control
                     continue;
                 }
 
-                host.World.Grid.TryGetCell(resolution.HorizontallyNormalized, out var terrain);
-                var color = ColorFor(terrain);
-                var x = resolution.HorizontallyNormalized.X;
-                if (x == 0 || x == width - 1)
-                    color = color.Lightened(0.16f);
-
-                if (ShowLod)
+                if (!resolution.TryGetCell(out var cell))
                 {
-                    var lodChunk = host.World.Chunks.ToAddress(
-                        new LogicalGridCoordinate(resolution.HorizontallyNormalized.X, resolution.HorizontallyNormalized.Y));
-                    color = color.Lerp(ColorForLod(host.Lod.Classify(lodChunk.Chunk)), 0.35f);
+                    DrawRect(rect, new Color(0.12f, 0.07f, 0.07f));
+                    continue;
+                }
+
+                var paintChunk = host.World.Chunks.ToAddress(cell).Chunk;
+                Color color;
+                if (ShowExploration)
+                {
+                    color = ColorFromKnowledge(host, paintChunk);
+                    if (ShowLod && host.Exploration.LevelOf(paintChunk) != ExplorationKnowledgeLevel.Unknown)
+                        color = color.Lerp(ColorForLod(host.Lod.Classify(paintChunk)), 0.35f);
+                }
+                else
+                {
+                    color = ColorFor(host.World.Grid.GetCell(cell));
+                    if (cell.X == 0 || cell.X == width - 1)
+                        color = color.Lightened(0.16f);
+                    if (ShowLod)
+                        color = color.Lerp(ColorForLod(host.Lod.Classify(paintChunk)), 0.35f);
                 }
 
                 DrawRect(rect, color);
@@ -81,6 +92,7 @@ public partial class WorldDebugMap : Control
     public BuildingId? SelectedBuildingId { get; set; }
     public SettlementId? SelectedSettlementId { get; set; }
     public bool ShowLod { get; set; }
+    public bool ShowExploration { get; set; }
 
     private void DrawSettlements(Vector2 center, LogicalGridCoordinate cursor)
     {
@@ -226,19 +238,48 @@ public partial class WorldDebugMap : Control
         };
     }
 
+    private static Color ColorFromKnowledge(SimulationHost host, ChunkCoordinate chunk)
+    {
+        var facts = host.Exploration.GetKnownFacts(chunk);
+        return facts.Level switch
+        {
+            ExplorationKnowledgeLevel.Unknown => ColorForExploration(ExplorationKnowledgeLevel.Unknown),
+            ExplorationKnowledgeLevel.Rumored => ColorForExploration(ExplorationKnowledgeLevel.Rumored),
+            ExplorationKnowledgeLevel.Scouted => ColorForScouted(facts.Terrain)
+                .Lerp(ColorForExploration(ExplorationKnowledgeLevel.Scouted), 0.35f),
+            _ => (facts.Biome.Known && facts.Biome.Dominant is { } biome
+                    ? ColorForBiome(biome)
+                    : ColorForExploration(facts.Level))
+                .Lerp(ColorForExploration(facts.Level), 0.40f)
+        };
+    }
+
+    private static Color ColorForScouted(TerrainKnowledge terrain)
+    {
+        var land = new Color(0.28f, 0.32f, 0.26f);
+        var water = new Color(0.14f, 0.24f, 0.42f);
+        if (terrain.HasWater && !terrain.HasLand)
+            return water;
+        if (terrain.HasLand && !terrain.HasWater)
+            return land;
+        return land.Lerp(water, 0.50f);
+    }
+
+    private static Color ColorForBiome(BiomeId biome) => biome switch
+    {
+        BiomeId.Ocean => new Color(0.12f, 0.28f, 0.52f),
+        BiomeId.Ice => new Color(0.82f, 0.90f, 0.95f),
+        BiomeId.Tundra => new Color(0.45f, 0.52f, 0.48f),
+        BiomeId.TemperateLand => new Color(0.32f, 0.52f, 0.24f),
+        BiomeId.Forest => new Color(0.12f, 0.32f, 0.16f),
+        BiomeId.Desert => new Color(0.72f, 0.62f, 0.32f),
+        BiomeId.Highland => new Color(0.42f, 0.36f, 0.30f),
+        _ => new Color(0.22f, 0.22f, 0.22f)
+    };
+
     private static Color ColorFor(TerrainCell terrain)
     {
-        var color = terrain.Biome switch
-        {
-            BiomeId.Ocean => new Color(0.12f, 0.28f, 0.52f),
-            BiomeId.Ice => new Color(0.82f, 0.90f, 0.95f),
-            BiomeId.Tundra => new Color(0.45f, 0.52f, 0.48f),
-            BiomeId.TemperateLand => new Color(0.32f, 0.52f, 0.24f),
-            BiomeId.Forest => new Color(0.12f, 0.32f, 0.16f),
-            BiomeId.Desert => new Color(0.72f, 0.62f, 0.32f),
-            BiomeId.Highland => new Color(0.42f, 0.36f, 0.30f),
-            _ => new Color(0.22f, 0.22f, 0.22f)
-        };
+        var color = ColorForBiome(terrain.Biome);
 
         if (!terrain.IsWater)
             color = color.Lerp(new Color(0.12f, 0.10f, 0.08f), terrain.Elevation * 0.28f);
@@ -255,5 +296,15 @@ public partial class WorldDebugMap : Control
         SimulationLodTier.Reduced => new Color(0.85f, 0.75f, 0.20f),
         SimulationLodTier.Aggregate => new Color(0.85f, 0.45f, 0.18f),
         _ => new Color(0.45f, 0.20f, 0.55f)
+    };
+
+    private static Color ColorForExploration(ExplorationKnowledgeLevel level) => level switch
+    {
+        ExplorationKnowledgeLevel.Rumored => new Color(0.45f, 0.28f, 0.55f),
+        ExplorationKnowledgeLevel.Scouted => new Color(0.35f, 0.45f, 0.55f),
+        ExplorationKnowledgeLevel.Mapped => new Color(0.28f, 0.55f, 0.42f),
+        ExplorationKnowledgeLevel.Confirmed => new Color(0.55f, 0.62f, 0.28f),
+        ExplorationKnowledgeLevel.Analyzed => new Color(0.75f, 0.72f, 0.35f),
+        _ => new Color(0.05f, 0.05f, 0.07f)
     };
 }
