@@ -1,5 +1,6 @@
 using Cultures.Civilization;
 using Cultures.Core.Ids;
+using Cultures.Military;
 
 namespace Cultures.Application.Persistence;
 
@@ -37,6 +38,8 @@ public sealed record PoliticalGroupRecord(
     int Influence);
 
 public sealed record InternalPoliticsRecord(ulong Faction, int Stability);
+
+public sealed record MilitaryUnitRecord(ulong Id, ulong Faction, string Name, ulong GenerationSalt, byte Lifecycle);
 
 public static class CivilizationMapper
 {
@@ -145,5 +148,29 @@ public static class CivilizationMapper
     {
         ArgumentNullException.ThrowIfNull(record);
         return new InternalStability(record.Stability);
+    }
+
+    public static MilitaryUnitRecord ToRecord(MilitaryUnitState unit)
+    {
+        ArgumentNullException.ThrowIfNull(unit);
+        return new MilitaryUnitRecord(
+            unit.Id.Value,
+            unit.Faction.Value,
+            unit.Name,
+            unit.GenerationSalt,
+            (byte)unit.Lifecycle);
+    }
+
+    public static MilitaryUnitState FromRecord(MilitaryUnitRecord record)
+    {
+        ArgumentNullException.ThrowIfNull(record);
+        return new MilitaryUnitState(
+            new MilitaryUnitId(record.Id),
+            new FactionId(record.Faction),
+            record.Name,
+            record.GenerationSalt)
+        {
+            Lifecycle = (MilitaryUnitLifecycle)record.Lifecycle
+        };
     }
 }

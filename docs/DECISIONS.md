@@ -1068,6 +1068,60 @@ Commands change group membership, influence and stability only. Events do not st
 Reason:
 Phase 11 is state + validation, not political AI.
 
+## AD-097 — Military is separate from Faction identity
+
+Status: Accepted
+
+Military units live in `MilitarySystem` / `MilitaryUnitDirectory`, not as a field on `FactionState`. Culture, faction, diplomacy, internal politics and military remain related but distinct.
+
+Reason:
+A faction is political identity. A military unit is a force belonging to that identity. Embedding units on `FactionState` would collapse the domains.
+
+## AD-098 — Military units are faction-owned
+
+Status: Accepted
+
+Every unit references exactly one existing `FactionId`. Neutral/mercenary forces are not modeled.
+
+Reason:
+Phase 12 has no mercenaries. Ownership must be validatable against `FactionDirectory`.
+
+## AD-099 — Character military membership is optional
+
+Status: Accepted
+
+`CharacterState.MilitaryUnit` defaults to `None`. A living character belongs to at most one unit. Faction must match. Leaving a faction clears membership the same way political group is cleared.
+
+Reason:
+Not every person is a soldier. Membership is roster-derived, not duplicated on the unit.
+
+## AD-100 — Military does not imply war
+
+Status: Accepted
+
+Creating, assigning, or disbanding units does not declare war, move people, or change diplomatic stance. Hostile diplomacy remains a stance only (AD-085).
+
+Reason:
+Phase 12 is identity and lifecycle, not a war game.
+
+## AD-101 — Military has no automatic consequences
+
+Status: Accepted
+
+Military commands do not change culture, political group, influence, stability, exploration, LOD, terrain, settlements, or resources. Events have no gameplay listeners. `SimulationHost.Step` does not tick military.
+
+Reason:
+Automatic combat, recruitment, or political fallout belongs to later phases.
+
+## AD-102 — Military stores no world occupancy in Phase 12
+
+Status: Accepted
+
+Units have no location, path, or chunk ownership. `LogicalGridCoordinate` remains the world-cell type (OD-002). Military code does not encode 4-neighbor adjacency, Chebyshev distance, or a private grid.
+
+Reason:
+Movement and hex conversion are out of scope. Future occupancy can attach world cells without rewriting military identity.
+
 ## OD-023 — Exact LOD radii and cadences
 
 **Status:** Open
@@ -1229,3 +1283,57 @@ Not implemented.
 **Status:** Open
 
 Trait bytes are not named ideologies and do not drive policy.
+
+## OD-050 — Army hierarchy
+
+**Status:** Open
+
+Phase 12 has one generic unit. Warband / Guard / Army ranks, parent armies, and nested formations are not modeled.
+
+## OD-051 — Commanders
+
+**Status:** Open
+
+No commander, officer, or `CharacterId` leadership field on units.
+
+## OD-052 — Recruitment
+
+**Status:** Open
+
+Units are created empty by command or baseline seed. No draft, volunteer, or profession-based recruitment.
+
+## OD-053 — Equipment
+
+**Status:** Open
+
+No weapons, armor, or unit inventory.
+
+## OD-054 — Combat model
+
+**Status:** Open
+
+No damage, HP, attack, defense, battles, or sieges.
+
+## OD-055 — Morale
+
+**Status:** Open
+
+Not stored.
+
+## OD-056 — War model
+
+**Status:** Open
+
+Hostile diplomacy is not war (OD-040). War declaration, goals, casualties, and history are later.
+
+## OD-057 — Unit movement
+
+**Status:** Open
+
+Units have no position. Future location must use existing world-cell coordinates, not a military-specific grid.
+
+## OD-058 — Formations
+
+**Status:** Open
+
+No formation shapes or multi-cell footprints for units.

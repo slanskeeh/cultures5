@@ -165,6 +165,8 @@ Tile-level fog, landmarks and the player map are not in Phase 8.
 
 Factions and cultures are not geography. A faction does not own chunks where its members stand. Creating a faction does not reveal exploration knowledge.
 
+Military units also do not own chunks or cells. Phase 12 stores no unit occupancy. If a later phase adds a location, it must use existing world-cell identity (`LogicalGridCoordinate`; OD-002), not a military-specific grid and not neighbor math.
+
 ## 12. Rendering
 
 The desired visual direction is:

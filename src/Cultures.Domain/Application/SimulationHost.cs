@@ -7,6 +7,7 @@ using Cultures.Core.Ids;
 using Cultures.Core.Randomness;
 using Cultures.Core.Time;
 using Cultures.Exploration;
+using Cultures.Military;
 using Cultures.Population;
 using Cultures.Settlement;
 using Cultures.World;
@@ -73,8 +74,10 @@ public sealed class SimulationHost
         Exploration = new ExplorationSystem(World, Clock, Events);
         Civilization = new CivilizationSystem(worldSeed, Ids, Population, Events, Clock);
         Politics = new InternalPoliticsSystem(worldSeed, Ids, Population, Civilization.Factions, Events, Clock);
+        Military = new MilitarySystem(worldSeed, Ids, Population, Civilization.Factions, Events, Clock);
         Civilization.SeedBaseline();
         Politics.SeedBaseline();
+        Military.SeedBaseline();
 
         Commands.Register(new PingCommandHandler());
         Commands.Register(new MoveDebugCursorHandler(Cursor));
@@ -105,6 +108,10 @@ public sealed class SimulationHost
         Commands.Register(new AssignPoliticalGroupHandler(Politics));
         Commands.Register(new SetPoliticalGroupInfluenceHandler(Politics));
         Commands.Register(new SetInternalStabilityHandler(Politics));
+        Commands.Register(new CreateMilitaryUnitHandler(Military));
+        Commands.Register(new AssignCharacterToMilitaryUnitHandler(Military));
+        Commands.Register(new RemoveCharacterFromMilitaryUnitHandler(Military));
+        Commands.Register(new DisbandMilitaryUnitHandler(Military));
     }
 
     public ulong WorldSeed { get; }
@@ -132,6 +139,7 @@ public sealed class SimulationHost
     public CivilizationSystem Civilization { get; }
     public DiplomacySystem Diplomacy => Civilization.Diplomacy;
     public InternalPoliticsSystem Politics { get; }
+    public MilitarySystem Military { get; }
 
     public ulong Step(ulong ticks)
     {

@@ -74,6 +74,14 @@ public readonly record struct PoliticalGroupId(ulong Value) : IEntityId
     public override string ToString() => $"PoliticalGroup:{Value}";
 }
 
+public readonly record struct MilitaryUnitId(ulong Value) : IEntityId
+{
+    public static MilitaryUnitId None => new(0);
+    public bool IsAssigned => Value != 0;
+    public bool Equals(IEntityId? other) => other is MilitaryUnitId id && Value == id.Value;
+    public override string ToString() => $"MilitaryUnit:{Value}";
+}
+
 public readonly record struct CivilizationId(ulong Value) : IEntityId
 {
     public static CivilizationId None => new(0);

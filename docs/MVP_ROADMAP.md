@@ -217,7 +217,7 @@ Delivered:
 
 Not done (later / open):
 - treaties, tribute, access, diplomatic history (OD-039);
-- war derived from Hostile (OD-040, Phase 12);
+- war derived from Hostile (OD-040);
 - AI diplomacy (OD-041);
 - extra stances such as Alliance (OD-042);
 - trade (later).
@@ -248,21 +248,29 @@ Internal political groups, influence and stability exist as simulation state. Po
 
 ## Phase 12 — Military
 
-Status: NEXT
+Status: COMPLETED
 
-Goals:
-- recruitment;
-- commanders;
-- units;
-- supply;
-- morale;
-- battles;
-- war history.
+Delivered:
+- `MilitarySystem` as a separate domain, not a field on `FactionState`;
+- typed `MilitaryUnitId` and faction-owned `MilitaryUnitState`;
+- optional `CharacterState.MilitaryUnit` with matching-faction validation;
+- Active / Disbanded lifecycle; disband clears memberships;
+- commands and events without combat, war, movement, or AI;
+- one empty generated unit per faction; names from `FictionalName`;
+- debug X cycle unit, Z enlist/leave, 3 disband.
+
+Not done (later / open):
+- army hierarchy, commanders, recruitment (OD-050, OD-051, OD-052);
+- equipment, combat, morale (OD-053, OD-054, OD-055);
+- war, movement, formations (OD-056, OD-057, OD-058);
+- territory, supply, military professions.
 
 Exit criteria:
-Military outcomes feed back into population, economy and diplomacy.
+Military identity and membership exist as simulation state. Combat outcomes feeding population, economy and diplomacy remain later.
 
 ## Phase 13 — History and Presentation
+
+Status: NEXT
 
 Goals:
 - historical UI;

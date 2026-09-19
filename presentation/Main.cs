@@ -5,6 +5,7 @@ using Cultures.Economy;
 using Cultures.Core.Commands;
 using Cultures.Core.Ids;
 using Cultures.Exploration;
+using Cultures.Military;
 using Cultures.Population;
 using Cultures.Settlement;
 using Cultures.World;
@@ -33,6 +34,7 @@ public partial class Main : Control
     private int _selectedSettlementIndex;
     private int _selectedFactionIndex;
     private int _selectedGroupIndex;
+    private int _selectedUnitIndex;
 
     public override void _Ready()
     {
@@ -159,6 +161,15 @@ public partial class Main : Control
                 break;
             case Key.Key2:
                 DebugAdjustInfluence(10);
+                break;
+            case Key.X:
+                CycleMilitaryUnit();
+                break;
+            case Key.Z:
+                DebugJoinMilitaryUnit();
+                break;
+            case Key.Key3:
+                DebugDisbandMilitaryUnit();
                 break;
             default:
                 return;
@@ -442,6 +453,52 @@ public partial class Main : Control
             : result.Error ?? "influence failed";
     }
 
+    private IReadOnlyList<MilitaryUnitState> UnitsOfSelectedFaction()
+    {
+        if (_host.Civilization.Factions.Count == 0)
+            return [];
+        var faction = _host.Civilization.Factions[_selectedFactionIndex % _host.Civilization.Factions.Count];
+        return _host.Military.Units.ForFaction(faction.Id);
+    }
+
+    private void CycleMilitaryUnit()
+    {
+        var units = UnitsOfSelectedFaction();
+        if (units.Count == 0)
+            return;
+        _selectedUnitIndex = (_selectedUnitIndex + 1) % units.Count;
+        var unit = units[_selectedUnitIndex];
+        _lastCommand = $"inspect {unit.Id} {unit.Name}";
+    }
+
+    private void DebugJoinMilitaryUnit()
+    {
+        if (_host.Population.Count == 0)
+            return;
+        var units = UnitsOfSelectedFaction();
+        if (units.Count == 0)
+            return;
+        var person = _host.Population[_selectedIndex];
+        var unit = units[_selectedUnitIndex % units.Count];
+        var target = person.MilitaryUnit == unit.Id ? MilitaryUnitId.None : unit.Id;
+        var result = _host.Commands.Execute(new AssignCharacterToMilitaryUnitCommand(person.Id, target));
+        _lastCommand = result.Success
+            ? $"{person.Id} unit {target}"
+            : result.Error ?? "military affiliation failed";
+    }
+
+    private void DebugDisbandMilitaryUnit()
+    {
+        var units = UnitsOfSelectedFaction();
+        if (units.Count == 0)
+            return;
+        var unit = units[_selectedUnitIndex % units.Count];
+        var result = _host.Commands.Execute(new DisbandMilitaryUnitCommand(unit.Id));
+        _lastCommand = result.Success
+            ? $"disbanded {unit.Id} {unit.Name}"
+            : result.Error ?? "disband failed";
+    }
+
     private void DebugEvaluateSettlements()
     {
         var result = _host.Commands.Execute(new EvaluateSettlementsCommand());
@@ -488,7 +545,7 @@ public partial class Main : Control
             : $"{selected.Id} {selected.LifeStage} age {selected.AgeYears:0.0}  {selected.Position}  " +
               $"hunger {selected.Needs.Hunger:0.00}  fatigue {selected.Needs.Fatigue:0.00}  " +
               $"food {selected.Inventory.GetQuantity(ResourceType.Food)}  {selected.Activity.Kind}  " +
-              $"work {workplace}  {selected.Settlement}  {selected.Culture}  {selected.Faction}  {selected.PoliticalGroup}  lod {selected.LodTier}";
+              $"work {workplace}  {selected.Settlement}  {selected.Culture}  {selected.Faction}  {selected.PoliticalGroup}  {selected.MilitaryUnit}  lod {selected.LodTier}";
         var familyLine = selected is null
             ? ""
             : $"parents {string.Join(",", selected.FamilyLinks.Parents.Select(id => id.Value.ToString()))}  " +
@@ -567,9 +624,17 @@ public partial class Main : Control
         var groupLine = selectedGroup is null
             ? "no political group"
             : $"{selectedGroup.Id} {selectedGroup.Name}  members {_host.Politics.CountMembers(selectedGroup.Id)}  infl {selectedGroup.Influence}";
+        var units = selectedFaction is null ? [] : _host.Military.Units.ForFaction(selectedFaction.Id);
+        var selectedUnit = units.Count > 0 ? units[_selectedUnitIndex % units.Count] : null;
+        var militaryLine = selectedFaction is null
+            ? "no military"
+            : $"military units {units.Count}";
+        var unitLine = selectedUnit is null
+            ? "no military unit"
+            : $"{selectedUnit.Id} {selectedUnit.Name}  {selectedUnit.Lifecycle}  members {_host.Military.CountMembers(selectedUnit.Id)}  {selectedUnit.Faction}";
 
         _label.Text =
-            "CULTURES — PHASE 11  internal politics\n" +
+            "CULTURES — PHASE 12  military\n" +
             $"{paused}   seed {_host.WorldSeed}   people {_host.Population.Alive.Count()}/{_host.Population.Count}   " +
             $"buildings {_host.Buildings.Count}   settlements {_host.Settlements.Count}   tick {date.Tick}\n" +
             $"cursor {cursor}   {chunk}   {terrain.Biome} {water} elev {terrain.Elevation:0.00}\n" +
@@ -584,9 +649,11 @@ public partial class Main : Control
             $"{relationLine}\n" +
             $"{politicsLine}\n" +
             $"{groupLine}\n" +
+            $"{militaryLine}\n" +
+            $"{unitLine}\n" +
             $"last: {_lastCommand}\n" +
             "Arrows cursor   Tab person   C follow   B/V building   M/U settlement   E detect   L lod   O refresh   9 agg  0 full\n" +
-            "P faction   J join   H diplomacy   I group   Y affiliate   W stability   1/2 influence   Q overlay   R rumor   S scout   D map   F confirm   A analyze   Space";
+            "P faction   J join   H diplomacy   I group   Y affiliate   W stability   1/2 influence   X unit   Z enlist   3 disband   Q overlay   R rumor   S scout   D map   F confirm   A analyze   Space";
 
         FitDebugHud();
         _map.QueueRedraw();

@@ -27,6 +27,7 @@ public sealed class CharacterState
         Culture = CultureId.Neutral;
         Faction = FactionId.None;
         PoliticalGroup = PoliticalGroupId.None;
+        MilitaryUnit = MilitaryUnitId.None;
         AssignedWorkplace = WorkplaceId.None;
     }
 
@@ -49,6 +50,7 @@ public sealed class CharacterState
     public CultureId Culture { get; set; }
     public FactionId Faction { get; set; }
     public PoliticalGroupId PoliticalGroup { get; set; }
+    public MilitaryUnitId MilitaryUnit { get; set; }
     public SimulationLodTier LodTier { get; set; } = SimulationLodTier.Full;
     public bool IsPersistentIndividual { get; set; }
     public bool IsPlayerCommanded { get; set; }

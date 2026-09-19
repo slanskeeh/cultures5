@@ -26,6 +26,9 @@ Simulation
 - economy;
 - settlements;
 - civilizations;
+- diplomacy;
+- internal politics;
+- military;
 - history.
 
 Domain
@@ -84,6 +87,7 @@ SettlementId
 CultureId
 FactionId
 PoliticalGroupId
+MilitaryUnitId
 CivilizationId
 RegionId
 ChunkId
@@ -105,6 +109,8 @@ Examples:
 - BuildBuildingCommand
 - AssignProfessionCommand
 - SetDiplomaticStanceCommand
+- CreateMilitaryUnitCommand
+- AssignCharacterToMilitaryUnitCommand
 - TradeCommand
 - OfferTreatyCommand
 

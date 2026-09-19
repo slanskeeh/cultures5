@@ -1,6 +1,7 @@
 using Cultures.Core.Events;
 using Cultures.Core.Ids;
 using Cultures.Core.Time;
+using Cultures.Military;
 using Cultures.Population;
 
 namespace Cultures.Civilization;
@@ -119,6 +120,7 @@ public sealed class CivilizationSystem
         }
 
         var previousGroup = character.PoliticalGroup;
+        var previousUnit = character.MilitaryUnit;
         character.Faction = factionId;
         if (previousGroup.IsAssigned)
         {
@@ -128,6 +130,16 @@ public sealed class CivilizationSystem
                 characterId,
                 previousGroup,
                 PoliticalGroupId.None));
+        }
+
+        if (previousUnit.IsAssigned)
+        {
+            character.MilitaryUnit = MilitaryUnitId.None;
+            Events.Publish(new MilitaryMembershipChangedEvent(
+                Clock.Tick,
+                characterId,
+                previousUnit,
+                MilitaryUnitId.None));
         }
 
         Events.Publish(new FactionMembershipChangedEvent(Clock.Tick, characterId, previous, factionId));

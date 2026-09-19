@@ -265,6 +265,17 @@ Political positions should not be arbitrary UI assignments. Phase 11 only stores
 
 Internal politics is social/faction state. It does not create territory, diplomacy consequences, war, economy, or autonomous political behavior.
 
+Culture, Faction, Internal Politics, Diplomacy and Military are related domains but are not interchangeable:
+
+```text
+Culture
+    ↓
+Faction
+    ├── Internal Politics
+    ├── Diplomacy
+    └── Military
+```
+
 ## 14. Diplomacy
 
 Phase 10 implements diplomacy as `DiplomacySystem` over the existing sparse symmetric `FactionRelationDirectory`.
@@ -348,7 +359,19 @@ When detail resumes, the same `CharacterId`s continue. Census on `ChunkSimulatio
 
 Exploration knowledge is not a LOD concern. A chunk may be Analyzed while Aggregate, or Unknown while Full. `ExplorationSystem` does not classify or mutate simulation tiers.
 
-## 18. Save/load
+## 18. Military
+
+Phase 12 implements military as `MilitarySystem` over a sparse `MilitaryUnitDirectory`.
+
+A unit belongs to exactly one existing faction. Membership is optional on `CharacterState.MilitaryUnit`. Member counts are derived from the roster. Units do not own chunks, cells, or territory.
+
+Lifecycle is Active / Disbanded. Disbanding clears memberships. There is no combat, HP, equipment, movement, or war.
+
+Hostile diplomacy is not war. Military commands do not change diplomacy, politics, exploration, LOD, or resources. `SimulationHost.Step` does not tick military.
+
+World cell identity remains `LogicalGridCoordinate` (OD-002). Military does not encode neighbor topology and is compatible with a future hexagonal cell set.
+
+## 19. Save/load
 
 Every mutable system must define serialization.
 
@@ -363,7 +386,7 @@ A save contains:
 - important history;
 - discoveries.
 
-## 19. Deterministic tests
+## 20. Deterministic tests
 
 Core systems should support:
 same initial state + same commands + same seed

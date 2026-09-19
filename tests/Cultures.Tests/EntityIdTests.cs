@@ -47,6 +47,7 @@ public sealed class EntityIdTests
         Assert.Equal(2UL, factory.NextCulture().Value);
         Assert.Equal(1UL, factory.NextFaction().Value);
         Assert.Equal(1UL, factory.NextPoliticalGroup().Value);
+        Assert.Equal(1UL, factory.NextMilitaryUnit().Value);
     }
 
     [Fact]
@@ -72,5 +73,7 @@ public sealed class EntityIdTests
         Assert.True(new FactionId(1).IsAssigned);
         Assert.False(PoliticalGroupId.None.IsAssigned);
         Assert.True(new PoliticalGroupId(1).IsAssigned);
+        Assert.False(MilitaryUnitId.None.IsAssigned);
+        Assert.True(new MilitaryUnitId(1).IsAssigned);
     }
 }

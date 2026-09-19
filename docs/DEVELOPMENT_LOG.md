@@ -987,6 +987,82 @@ Phase 12 — Military. Do not start automatically.
 - Influence is not member count. Do not replace it with a population formula without closing OD-045.
 - Do not attach groups to chunks or exploration.
 
+## 2026-09-17 — Task: Phase 12 Military
+
+### 1. Task
+Add the military identity foundation: faction-owned units, optional character membership, lifecycle, commands, validation, deterministic creation, sparse storage, events, tests, minimal debug HUD. No combat, war, movement, recruitment economy, or hex conversion of the world.
+
+### 2. Done
+- `MilitaryUnitId` and faction-owned `MilitaryUnitState` (name + Active/Disbanded). One generic unit, no type hierarchy.
+- Sparse `MilitaryUnitDirectory` (by id and faction). Disbanded units remain listed.
+- `CharacterState.MilitaryUnit`; cross-faction assign fails; a person is in at most one unit; leaving a faction clears membership like political group.
+- Member counts derived from the roster. No HP/attack/defense. No unit location or chunk ownership.
+- Commands: CreateMilitaryUnit / AssignCharacterToMilitaryUnit / RemoveCharacterFromMilitaryUnit / DisbandMilitaryUnit.
+- Events are facts only. `Step` does not tick military.
+- Seed: 1 empty unit per generated faction; names from `FictionalName` (not `Host.Random`).
+- Debug: X cycle unit, Z enlist/leave, 3 disband. P/J/H/I/Y/W/1/2 unchanged.
+- Mapper DTO seam; envelope v2 unchanged.
+
+### 3. Working / Verified
+- 197/197 tests including identity, creation, membership, explicit switch, leave-faction clear, disband, isolation from world/LOD/diplomacy/politics/exploration/resources, determinism, mapper. Phase 11 tests still pass.
+- Solution build 0 warnings / 0 errors.
+- Godot 4.7.2.stable.mono headless `--quit-after 45` exit 0. X/Z/3 were not clicked in a GUI session.
+
+### 4. Tests
+- `dotnet test tests/Cultures.Tests/Cultures.Tests.csproj -warnaserror` — 197/197 passing. Previously 188; +9 military tests.
+
+### 5. Bugs found
+- None.
+
+### 6. Bugs fixed
+- None.
+
+### 7. Known limitations / TODO
+- No army hierarchy, commanders, recruitment (OD-050..OD-052).
+- No equipment, combat, morale (OD-053..OD-055).
+- Hostile is still not war (OD-040, OD-056).
+- No unit movement or formations (OD-057, OD-058).
+- Military not in save envelope v2 (OD-036).
+- Debug military HUD not GUI-verified.
+- World cell geometry remains open (OD-002); military does not encode adjacency.
+
+### 8. Architecture decisions
+- AD-097 military ≠ faction identity
+- AD-098 units are faction-owned
+- AD-099 optional membership
+- AD-100 military ≠ war
+- AD-101 no automatic consequences
+- AD-102 no occupancy/movement in Phase 12
+- OD-050..OD-058 open
+
+### 9. Files changed
+- `src/Cultures.Domain/Military/MilitarySystem.cs`, `MilitaryCommands.cs`, `MilitaryEvents.cs`, `MilitaryRules.cs`, `MilitaryUnitState.cs`
+- `src/Cultures.Domain/Civilization/CivilizationSystem.cs`
+- `src/Cultures.Domain/Core/Ids/EntityIds.cs`, `EntityIdFactory.cs`
+- `src/Cultures.Domain/Population/CharacterState.cs`
+- `src/Cultures.Domain/Application/SimulationHost.cs`
+- `src/Cultures.Domain/Application/Persistence/CivilizationRecords.cs`
+- `presentation/Main.cs`
+- `tests/Cultures.Tests/MilitaryTests.cs`, `EntityIdTests.cs`
+- `docs/DECISIONS.md`, `docs/MVP_ROADMAP.md`, `docs/SIMULATION_ARCHITECTURE.md`, `docs/ARCHITECTURE.md`, `docs/WORLD_ARCHITECTURE.md`, `docs/DEVELOPMENT_LOG.md`
+
+### 10. Current project health
+- Build: working, 0 warnings, 0 errors
+- Tests: 197/197 passing
+- Runtime: headless Main boots
+- Known broken areas: none identified; military HUD not GUI-verified
+
+### 11. Next step
+Phase 13 — History and Presentation. Do not start automatically.
+
+### 12. Notes for ChatGPT
+- Do not start war because military units exist.
+- Do not turn Hostile diplomacy into war.
+- Do not tick military every simulation step.
+- Do not rewrite `GridNavigator` to hex because the Phase 12 prompt mentions hex; cell geometry is OD-002.
+- Do not add HP, weapons, or unit movement without a later phase.
+- Do not attach units to chunks or exploration.
+
 
 
 
