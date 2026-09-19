@@ -126,4 +126,13 @@ public sealed class InternalPoliticsDirectory
         else
             _byFaction[faction.Value] = stability;
     }
+
+    public IEnumerable<(FactionId Faction, InternalStability Stability)> Entries
+    {
+        get
+        {
+            foreach (var pair in _byFaction)
+                yield return (new FactionId(pair.Key), pair.Value);
+        }
+    }
 }

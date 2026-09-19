@@ -19,6 +19,7 @@ public partial class WorldDebugMap : Control
     public const int RadiusY = 10;
 
     public SimulationHost? Host { get; set; }
+    public bool HighContrast { get; set; }
 
     public override void _Ready()
     {
@@ -60,23 +61,28 @@ public partial class WorldDebugMap : Control
                 }
 
                 var paintChunk = host.World.Chunks.ToAddress(cell).Chunk;
-                Color color;
                 if (ShowExploration)
                 {
-                    color = ColorFromKnowledge(host, paintChunk);
+                    var color = ColorFromKnowledge(host, paintChunk);
                     if (ShowLod && host.Exploration.LevelOf(paintChunk) != ExplorationKnowledgeLevel.Unknown)
                         color = color.Lerp(ColorForLod(host.Lod.Classify(paintChunk)), 0.35f);
+                    DrawRect(rect, color);
                 }
                 else
                 {
-                    color = ColorFor(host.World.Grid.GetCell(cell));
+                    DrawTextureRect(SimpleTextures.Biome(host.World.Grid.GetCell(cell).Biome), rect, false);
+                    if (HighContrast)
+                        DrawRect(rect, new Color(1f, 1f, 1f, 0.45f), filled: false, width: 1);
+                    var terrain = host.World.Grid.GetCell(cell);
+                    if (terrain.HasRiver)
+                        DrawRect(rect, new Color(0.20f, 0.45f, 0.72f, 0.35f));
+                    if (terrain.IsOccupied)
+                        DrawRect(rect, new Color(0.85f, 0.55f, 0.18f, 0.25f));
                     if (cell.X == 0 || cell.X == width - 1)
-                        color = color.Lightened(0.16f);
+                        DrawRect(rect, new Color(1, 1, 1, 0.08f));
                     if (ShowLod)
-                        color = color.Lerp(ColorForLod(host.Lod.Classify(paintChunk)), 0.35f);
+                        DrawRect(rect, ColorForLod(host.Lod.Classify(paintChunk)) with { A = 0.28f });
                 }
-
-                DrawRect(rect, color);
 
                 if (dx == 0 && dy == 0)
                     DrawRect(rect, new Color(0.95f, 0.86f, 0.45f), filled: false, width: 2);
@@ -134,7 +140,6 @@ public partial class WorldDebugMap : Control
         if (Host is null)
             return;
 
-        var font = ThemeDB.FallbackFont;
         foreach (var building in Host.Buildings.All)
         {
             foreach (var cell in building.FootprintCells)
@@ -147,19 +152,8 @@ public partial class WorldDebugMap : Control
                 var pos = new Vector2(
                     center.X + dx * CellSize,
                     center.Y + dy * CellSize);
-                var letter = LetterFor(building.TypeId);
-                DrawRect(
-                    new Rect2(pos.X - CellSize * 0.4f, pos.Y - CellSize * 0.4f, CellSize * 0.8f, CellSize * 0.8f),
-                    ColorForBuilding(building),
-                    filled: true);
-                DrawString(
-                    font,
-                    pos + new Vector2(-5, 5),
-                    letter,
-                    HorizontalAlignment.Left,
-                    -1,
-                    12,
-                    new Color(0.08f, 0.08f, 0.08f));
+                var sprite = new Rect2(pos.X - CellSize * 0.4f, pos.Y - CellSize * 0.4f, CellSize * 0.8f, CellSize * 0.8f);
+                DrawTextureRect(SimpleTextures.Building(building.TypeId), sprite, false);
                 if (SelectedBuildingId == building.Id)
                     DrawRect(
                         new Rect2(pos.X - CellSize * 0.5f, pos.Y - CellSize * 0.5f, CellSize, CellSize),
@@ -168,30 +162,6 @@ public partial class WorldDebugMap : Control
                         width: 2);
             }
         }
-    }
-
-    private static string LetterFor(BuildingTypeId type)
-    {
-        if (type == BuildingTypeId.Farm)
-            return "F";
-        if (type == BuildingTypeId.Storage)
-            return "S";
-        if (type == BuildingTypeId.Shelter)
-            return "H";
-        if (type == BuildingTypeId.Workshop)
-            return "W";
-        return "?";
-    }
-
-    private static Color ColorForBuilding(BuildingState building)
-    {
-        if (building.TypeId == BuildingTypeId.Farm)
-            return new Color(0.55f, 0.72f, 0.28f);
-        if (building.TypeId == BuildingTypeId.Storage)
-            return new Color(0.72f, 0.58f, 0.28f);
-        if (building.TypeId == BuildingTypeId.Shelter)
-            return new Color(0.62f, 0.48f, 0.38f);
-        return new Color(0.50f, 0.50f, 0.58f);
     }
 
     private void DrawCharacters(Vector2 center, LogicalGridCoordinate cursor)
@@ -209,33 +179,11 @@ public partial class WorldDebugMap : Control
             var pos = new Vector2(
                 center.X + dx * CellSize,
                 center.Y + dy * CellSize);
-            var radius = !character.IsAlive
-                ? 4f
-                : character.LifeStage == CharacterLifeStage.Infant ? 4.5f : 6f;
-            if (character.LodTier.IsAggregate())
-                radius -= 1.5f;
-            DrawCircle(pos, radius, ColorForAction(character));
+            var sprite = new Rect2(pos.X - CellSize * 0.45f, pos.Y - CellSize * 0.45f, CellSize * 0.9f, CellSize * 0.9f);
+            DrawTextureRect(SimpleTextures.Character(character.LifeStage, SelectedId == character.Id), sprite, false);
             if (character.Settlement.IsAssigned)
-                DrawArc(pos, radius + 5f, 0, MathF.Tau, 12, ColorForSettlement(character.Settlement, SettlementLifecycle.Established));
-            if (SelectedId == character.Id)
-                DrawArc(pos, radius + 3f, 0, MathF.Tau, 16, new Color(1f, 1f, 1f));
+                DrawArc(pos, CellSize * 0.42f, 0, MathF.Tau, 12, ColorForSettlement(character.Settlement, SettlementLifecycle.Established));
         }
-    }
-
-    private static Color ColorForAction(CharacterState character)
-    {
-        if (!character.IsAlive)
-            return new Color(0.25f, 0.25f, 0.25f);
-
-        return character.Activity.Kind switch
-        {
-            ActionKind.Eat => new Color(0.95f, 0.55f, 0.15f),
-            ActionKind.Sleep => new Color(0.45f, 0.65f, 0.95f),
-            ActionKind.Work => new Color(0.72f, 0.50f, 0.22f),
-            ActionKind.Move => new Color(0.95f, 0.95f, 0.95f),
-            ActionKind.Idle => new Color(0.70f, 0.70f, 0.55f),
-            _ => new Color(0.85f, 0.35f, 0.45f)
-        };
     }
 
     private static Color ColorFromKnowledge(SimulationHost host, ChunkCoordinate chunk)
@@ -274,21 +222,11 @@ public partial class WorldDebugMap : Control
         BiomeId.Forest => new Color(0.12f, 0.32f, 0.16f),
         BiomeId.Desert => new Color(0.72f, 0.62f, 0.32f),
         BiomeId.Highland => new Color(0.42f, 0.36f, 0.30f),
+        BiomeId.Swamp => new Color(0.18f, 0.34f, 0.26f),
+        BiomeId.Savanna => new Color(0.58f, 0.54f, 0.24f),
+        BiomeId.Taiga => new Color(0.16f, 0.30f, 0.24f),
         _ => new Color(0.22f, 0.22f, 0.22f)
     };
-
-    private static Color ColorFor(TerrainCell terrain)
-    {
-        var color = ColorForBiome(terrain.Biome);
-
-        if (!terrain.IsWater)
-            color = color.Lerp(new Color(0.12f, 0.10f, 0.08f), terrain.Elevation * 0.28f);
-
-        if (terrain.IsOccupied)
-            color = color.Lerp(new Color(0.85f, 0.55f, 0.18f), 0.45f);
-
-        return color;
-    }
 
     private static Color ColorForLod(SimulationLodTier tier) => tier switch
     {

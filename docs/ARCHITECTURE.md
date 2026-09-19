@@ -22,6 +22,7 @@ Application
 
 Simulation
 - world;
+- ecology;
 - population;
 - economy;
 - settlements;
@@ -29,6 +30,7 @@ Simulation
 - diplomacy;
 - internal politics;
 - military;
+- social life;
 - history.
 
 Domain
@@ -76,18 +78,23 @@ View:
 
 Never put authoritative hunger, inventory, family, profession or history only in a Node.
 
+Presentation selection and camera live in Application (`PresentationCamera`, `PresentationSelection`). Godot draws from domain IDs. The debug map uses procedural 32×32 textures for biomes, buildings and life stages; this is not final art. Exploration overlay must not leak raw unexplored terrain facts.
+
 ## 4. Stable IDs
 
 Use typed IDs conceptually:
 
 CharacterId
 FamilyId
+HouseholdId
 BuildingId
 SettlementId
 CultureId
 FactionId
 PoliticalGroupId
 MilitaryUnitId
+HistoryEventId
+ResourceDepositId
 CivilizationId
 RegionId
 ChunkId
@@ -147,6 +154,9 @@ A system owns one coherent responsibility.
 Good:
 CharacterNeedsSystem
 ProductionSystem
+NaturalResourceSystem
+HistoryRecorder
+SocialLifeSystem
 MigrationSystem
 
 Bad:
@@ -177,6 +187,8 @@ Godot is responsible for:
 - UI;
 - asset loading;
 - presentation.
+
+Debug presentation currently paints procedural `ImageTexture` tiles (`SimpleTextures`) instead of a final atlas. Camera zoom is presentation-only and does not move `SimulationCursor`. F5/F9 save slots, F1 help, F11 high contrast, and F12 HUD size are presentation.
 
 Godot's TileSet/TileMapLayer systems support isometric tile shapes, but the project's authoritative logical grid remains our own domain model. Godot's tile tools are therefore a presentation/authoring aid, not the simulation source of truth. citeturn0search6
 

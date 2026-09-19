@@ -28,6 +28,7 @@ public sealed class ProductionSystem
     public ProductionResolver Resolver { get; }
     public EventBus Events { get; }
     public SimulationClock Clock { get; }
+    public NaturalResourceSystem? Ecology { get; set; }
 
     public bool TryEvaluate(BuildingState building, CharacterState? worker, out ProductionEvaluation evaluation)
     {
@@ -73,6 +74,8 @@ public sealed class ProductionSystem
             return false;
         if (!recipe.TryExecute(building.Inventory, evaluation.Outputs))
             return false;
+
+        Ecology?.OnProduced(building, evaluation);
 
         if (recipe.Skill is { } skill)
         {
@@ -138,7 +141,8 @@ public sealed class ProductionSystem
         if (character.AssignedWorkplace.IsAssigned
             && Buildings.TryGet(character.AssignedWorkplace.Building, out var assigned)
             && assigned.IsActive
-            && character.AssignedWorkplace.Slot < assigned.Workplaces.Count)
+            && character.AssignedWorkplace.Slot < assigned.Workplaces.Count
+            && ProfessionAllows(character, assigned))
         {
             var slot = assigned.Workplaces[character.AssignedWorkplace.Slot];
             if (slot.IsFree || slot.Worker == character.Id)
@@ -148,6 +152,8 @@ public sealed class ProductionSystem
         foreach (var building in Buildings.All)
         {
             if (!building.IsActive || building.Definition.WorkplaceCount == 0)
+                continue;
+            if (!ProfessionAllows(character, building))
                 continue;
             foreach (var slot in building.Workplaces)
             {
@@ -204,6 +210,17 @@ public sealed class ProductionSystem
         }
 
         return null;
+    }
+
+    private static bool ProfessionAllows(CharacterState character, BuildingState building)
+    {
+        if (!character.Profession.IsAssigned)
+            return true;
+        if (building.Definition.RequiredProfession is { } required)
+            return character.Profession == required;
+        return character.Profession.Value is "woodcutter" or "mason" or "crafter"
+            ? building.TypeId == BuildingTypeId.Workshop
+            : character.Profession == ProfessionId.Farmer && building.TypeId == BuildingTypeId.Farm;
     }
 
     private void RouteToStorage(BuildingState source)

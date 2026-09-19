@@ -35,4 +35,6 @@ public sealed class SimulationCursor
         _events.Publish(new DebugCursorMovedEvent(_tick(), from, to, crossedSeam));
         return CommandResult.Ok();
     }
+
+    public void Restore(LogicalGridCoordinate position) => Position = position;
 }

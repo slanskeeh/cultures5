@@ -45,7 +45,10 @@ public enum BiomeId : byte
     TemperateLand = 3,
     Forest = 4,
     Desert = 5,
-    Highland = 6
+    Highland = 6,
+    Swamp = 7,
+    Savanna = 8,
+    Taiga = 9
 }
 
 /// <summary>
@@ -64,7 +67,9 @@ public readonly record struct GeneratedTerrain(
     float Elevation,
     bool IsWater,
     ClimateSample Climate,
-    BiomeId Biome)
+    BiomeId Biome,
+    bool HasRiver = false,
+    float Fertility = 0f)
 {
     public TerrainKind Kind => IsWater ? TerrainKind.Water : TerrainKind.Land;
     public bool Passable => !IsWater;
@@ -83,6 +88,8 @@ public readonly record struct TerrainCell(GeneratedTerrain Generated, Occupancy 
     public bool IsWater => Generated.IsWater;
     public ClimateSample Climate => Generated.Climate;
     public BiomeId Biome => Generated.Biome;
+    public bool HasRiver => Generated.HasRiver;
+    public float Fertility => Generated.Fertility;
     public TerrainKind Kind => Generated.Kind;
     public bool Passable => Generated.Passable;
     public bool IsOccupied => Occupancy.IsOccupied;

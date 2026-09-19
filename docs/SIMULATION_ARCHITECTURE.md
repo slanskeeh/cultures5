@@ -143,15 +143,17 @@ Avoid opaque formulas where the player cannot understand the cause.
 
 ## 7. Professions
 
-ProfessionDefinition describes:
+Phase 16 stores vocation as `ProfessionId` on `CharacterState`, distinct from skills.
+
+`ProfessionCatalog` currently defines Farmer, Woodcutter, Mason, Crafter, Hunter, Fisher. Assignment is a command. Unemployed adults may work any compatible workplace; an assigned profession can restrict workplaces (`RequiredProfession` on farm, hunting camp, fishery). Changing profession does not grant skill XP. Unemployed adults may hunt wildlife; an assigned non-Hunter may not.
+
+A later `ProfessionDefinition` may still add:
 - required skills;
 - workplace tags;
 - actions;
 - production abilities;
 - teaching abilities;
 - status/influence implications.
-
-A character can change profession through simulation or player intervention.
 
 ## 8. Skills
 
@@ -167,9 +169,11 @@ Phase 5 stores integer skill experience on the character. Work and teaching add 
 
 ## 9. Families
 
-Phase 5 represents genealogy as parent/child `CharacterId` links and queries (siblings, grandparents). A full `FamilyState` (name, reputation, household) is future work. `FamilyId` is reserved and unused. Phase 6 adds `HouseholdId.None` on characters and caregiver links (initially parents). Family membership is independent of settlement membership.
+Genealogy is parent/child `FamilyLinks` (siblings, grandparents). `FamilyId` remains unused as a named lineage object.
 
-Birth now starts at age 0 as `Infant`. Life stages: Infant → Child → Adolescent → Adult → Elder → Dead. Infants cannot work, teach, or navigate independently.
+Phase 16 adds `HouseholdState`: co-residence, optional shelter home, derived `CharacterState.Household`. Partnership is reciprocal and may form a household. Birth copies the parent's household. Genealogy ≠ household ≠ settlement.
+
+Birth starts at age 0 as `Infant`. Life stages: Infant → Child → Adolescent → Adult → Elder → Dead. Infants cannot work, teach, or navigate independently. Hungry infants may eat from caregiver inventory.
 
 ## 10. Buildings
 
@@ -207,7 +211,9 @@ A Farm does not inherently mean Wheat.
 
 The production resolver evaluates context.
 
-Phase 4 implements this as `ProductionResolver` + `IEnvironmentProductionModifier`. The current modifier is neutral (1.0x). Do not add biome-specific building types; change the resolver/modifier instead.
+Phase 4 implements this as `ProductionResolver` + `IEnvironmentProductionModifier`. Phase 15 fills `ContextualRecipeTable` and `ContextualEnvironmentProductionModifier` (farm/forest berries, fertility, rivers, highland stone). A `NeutralEnvironmentProductionModifier` remains for isolated tests. Do not add biome-specific building types; change the resolver/modifier instead.
+
+Natural deposits (`ResourceDeposit`) are world stocks, not character inventory. Wildlife is a per-chunk aggregate.
 
 ## 12. Settlements
 
@@ -284,6 +290,8 @@ Stances: Neutral (implicit/missing), Friendly, Hostile.
 
 These are diplomatic stances only. Friendly is not an alliance. Hostile is not war. Changing stance does not move people, reveal geography, claim land, or alter the economy.
 
+Phase 18 adds explicit `DiplomaticPact` records (Trade, NonAggression, Alliance) with validation only. Hostile cannot form Trade. Alliance requires Friendly. Pacts do not move goods or start wars.
+
 A later relation can remember:
 - treaties;
 - trade;
@@ -315,7 +323,15 @@ A new settlement should be explainable by simulation history.
 
 ## 16. History
 
-History has levels:
+Phase 13 implements `HistoryRecorder` as an observer over the event bus.
+
+Recorded facts include births/deaths, buildings, settlements, cultures/factions, diplomacy, pacts, politics, military lifecycle, aggregate demography, profession, household, partnership, home changes, hunts, and season changes.
+
+Not recorded: ticks, hunger, pathfinding, LOD, exploration spam, routine work.
+
+History does not mutate simulation. Queries are by subject IDs and recent chronology. Importance is Ordinary or Major.
+
+Later layers may still group facts as:
 
 Personal
 - birth;
@@ -373,18 +389,22 @@ World cell identity remains `LogicalGridCoordinate` (OD-002). Military does not 
 
 ## 19. Save/load
 
-Every mutable system must define serialization.
-
-Saves are versioned.
+`SaveEnvelope` v4 is a full capture of authoritative dynamic state (`SimulationPersistence.Capture` / `Restore`). v3 migrates forward. v2 stays header-only.
 
 A save contains:
 - seed;
-- generation version;
-- simulation time;
-- mutable state;
-- persistent IDs;
-- important history;
-- discoveries.
+- generation version and world size;
+- simulation time, cursor, and clock speed;
+- ID counters;
+- characters, buildings, settlements, households;
+- cultures, factions, relations, pacts, politics, military;
+- exploration knowledge;
+- history;
+- resource deposits and wildlife;
+- occupancy markers and LOD overrides;
+- onboarding flag.
+
+Static terrain is regenerated from seed. Unsupported versions fail. Restore does not re-run settlement emergence. File slots use temp+move.
 
 ## 20. Deterministic tests
 

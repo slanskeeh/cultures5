@@ -86,6 +86,8 @@ public sealed class SettlementStatistics
     public int UnemployedAdults { get; set; }
     public int EstimatedFoodProduction { get; set; }
     public int ShelterCapacity { get; set; }
+    public int Households { get; set; }
+    public int Dependents { get; set; }
 
     public void Clear()
     {
@@ -103,6 +105,8 @@ public sealed class SettlementStatistics
         UnemployedAdults = 0;
         EstimatedFoodProduction = 0;
         ShelterCapacity = 0;
+        Households = 0;
+        Dependents = 0;
     }
 }
 

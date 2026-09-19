@@ -7,7 +7,13 @@ public enum ResourceType : byte
 {
     Food = 1,
     Wood = 2,
-    Stone = 3
+    Stone = 3,
+    Clay = 4,
+    Metal = 5,
+    Mineral = 6,
+    WildBerries = 7,
+    Fish = 8,
+    Meat = 9
 }
 
 public readonly record struct ResourceStack

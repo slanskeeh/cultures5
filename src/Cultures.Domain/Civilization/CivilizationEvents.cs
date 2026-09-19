@@ -25,3 +25,17 @@ public sealed record DiplomaticStanceChangedEvent(
     FactionId Higher,
     FactionRelationStance Previous,
     FactionRelationStance Current) : ISimulationEvent;
+
+public sealed record DiplomaticPactFormedEvent(
+    ulong Tick,
+    DiplomaticPactId Pact,
+    FactionId Lower,
+    FactionId Higher,
+    DiplomaticPactKind Kind) : ISimulationEvent;
+
+public sealed record DiplomaticPactBrokenEvent(
+    ulong Tick,
+    DiplomaticPactId Pact,
+    FactionId Lower,
+    FactionId Higher,
+    DiplomaticPactKind Kind) : ISimulationEvent;

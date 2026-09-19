@@ -39,6 +39,22 @@ public sealed class FamilyLinks
         _children.Add(child);
         return true;
     }
+
+    public void Restore(IEnumerable<CharacterId> parents, IEnumerable<CharacterId> children, IEnumerable<CharacterId> caregivers)
+    {
+        _parents.Clear();
+        _children.Clear();
+        _caregivers.Clear();
+        foreach (var id in parents)
+            if (id.IsAssigned && !_parents.Contains(id))
+                _parents.Add(id);
+        foreach (var id in children)
+            if (id.IsAssigned && !_children.Contains(id))
+                _children.Add(id);
+        foreach (var id in caregivers)
+            if (id.IsAssigned && !_caregivers.Contains(id))
+                _caregivers.Add(id);
+    }
 }
 
 public static class FamilyQueries

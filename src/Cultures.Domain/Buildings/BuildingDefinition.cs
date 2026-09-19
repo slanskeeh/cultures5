@@ -1,3 +1,5 @@
+using Cultures.Population;
+
 namespace Cultures.Buildings;
 
 /// <summary>
@@ -15,7 +17,9 @@ public sealed class BuildingDefinition
         RecipeId? recipe,
         int storageCapacity,
         bool isShelter,
-        bool isStorage)
+        bool isStorage,
+        ProfessionId? requiredProfession = null,
+        bool requiresWaterAdjacent = false)
     {
         if (workplaceCount < 0)
             throw new ArgumentOutOfRangeException(nameof(workplaceCount));
@@ -32,6 +36,8 @@ public sealed class BuildingDefinition
         StorageCapacity = storageCapacity;
         IsShelter = isShelter;
         IsStorage = isStorage;
+        RequiredProfession = requiredProfession;
+        RequiresWaterAdjacent = requiresWaterAdjacent;
     }
 
     public BuildingTypeId TypeId { get; }
@@ -44,6 +50,8 @@ public sealed class BuildingDefinition
     public int StorageCapacity { get; }
     public bool IsShelter { get; }
     public bool IsStorage { get; }
+    public ProfessionId? RequiredProfession { get; }
+    public bool RequiresWaterAdjacent { get; }
 }
 
 public sealed class BuildingCatalog
@@ -94,7 +102,8 @@ public sealed class BuildingCatalog
             recipe: RecipeId.FarmFood,
             storageCapacity: 16,
             isShelter: false,
-            isStorage: false),
+            isStorage: false,
+            requiredProfession: ProfessionId.Farmer),
         new BuildingDefinition(
             BuildingTypeId.Storage,
             "storage",
@@ -116,6 +125,31 @@ public sealed class BuildingCatalog
             recipe: RecipeId.WorkshopWood,
             storageCapacity: 16,
             isShelter: false,
-            isStorage: false)
+            isStorage: false),
+        new BuildingDefinition(
+            BuildingTypeId.HuntingCamp,
+            "hunting_camp",
+            BuildingFootprint.Cell1x1,
+            occupiesCells: true,
+            blocksMovement: true,
+            workplaceCount: 1,
+            recipe: RecipeId.HuntFood,
+            storageCapacity: 16,
+            isShelter: false,
+            isStorage: false,
+            requiredProfession: ProfessionId.Hunter),
+        new BuildingDefinition(
+            BuildingTypeId.Fishery,
+            "fishery",
+            BuildingFootprint.Cell1x1,
+            occupiesCells: true,
+            blocksMovement: true,
+            workplaceCount: 1,
+            recipe: RecipeId.FisheryFood,
+            storageCapacity: 16,
+            isShelter: false,
+            isStorage: false,
+            requiredProfession: ProfessionId.Fisher,
+            requiresWaterAdjacent: true)
     ]);
 }

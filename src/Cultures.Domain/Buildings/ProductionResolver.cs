@@ -17,13 +17,50 @@ public interface IEnvironmentProductionModifier
     ProductionModifier Evaluate(BuildingState building, TerrainCell terrain, ProductionRecipe recipe);
 }
 
-/// <summary>
-/// Phase 4 placeholder. Do not encode biome-specific products here.
-/// </summary>
 public sealed class NeutralEnvironmentProductionModifier : IEnvironmentProductionModifier
 {
     public ProductionModifier Evaluate(BuildingState building, TerrainCell terrain, ProductionRecipe recipe) =>
         ProductionModifier.Neutral;
+}
+
+/// <summary>
+/// Environment changes duration/output from fertility and biome. Recipe choice is table-driven.
+/// </summary>
+public sealed class ContextualEnvironmentProductionModifier : IEnvironmentProductionModifier
+{
+    public ProductionModifier Evaluate(BuildingState building, TerrainCell terrain, ProductionRecipe recipe)
+    {
+        if (terrain.IsWater)
+            return new ProductionModifier(0.25f, 1.25f);
+
+        var fertility = terrain.Fertility;
+        var output = recipe.Id == RecipeId.FarmFood || recipe.Id == RecipeId.FarmBerries
+            ? 0.55f + fertility * 0.90f
+            : 0.85f + fertility * 0.25f;
+        var duration = recipe.Id == RecipeId.FarmFood ? 1.15f - fertility * 0.30f : 1f;
+        return new ProductionModifier(Math.Clamp(output, 0.25f, 1.8f), Math.Clamp(duration, 0.70f, 1.40f));
+    }
+}
+
+public static class ContextualRecipeTable
+{
+    public static RecipeId Resolve(BuildingTypeId type, BiomeId biome)
+    {
+        if (type == BuildingTypeId.Farm)
+        {
+            if (biome is BiomeId.Forest or BiomeId.Taiga or BiomeId.Swamp)
+                return RecipeId.FarmBerries;
+            return RecipeId.FarmFood;
+        }
+
+        if (type == BuildingTypeId.Workshop)
+            return biome == BiomeId.Highland ? RecipeId.WorkshopStone : RecipeId.WorkshopWood;
+        if (type == BuildingTypeId.HuntingCamp)
+            return RecipeId.HuntFood;
+        if (type == BuildingTypeId.Fishery)
+            return RecipeId.FisheryFood;
+        return type == BuildingTypeId.Farm ? RecipeId.FarmFood : RecipeId.WorkshopWood;
+    }
 }
 
 public readonly record struct ProductionEvaluation(
@@ -55,9 +92,10 @@ public sealed class ProductionResolver
         out ProductionEvaluation evaluation)
     {
         evaluation = default;
-        if (building.Definition.Recipe is not { } recipeId)
+        if (building.Definition.Recipe is not { } fallback)
             return false;
-        if (!Recipes.TryGet(recipeId, out var recipe))
+        var recipeId = ContextualRecipeTable.Resolve(building.TypeId, terrain.Biome);
+        if (!Recipes.TryGet(recipeId, out var recipe) && !Recipes.TryGet(fallback, out recipe))
             return false;
 
         var modifier = Environment.Evaluate(building, terrain, recipe);

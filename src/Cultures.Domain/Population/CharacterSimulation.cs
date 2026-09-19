@@ -48,6 +48,8 @@ public sealed class CharacterSimulation
     public CharacterDecisionSystem Decisions { get; }
     public ILodPolicy? Lod { get; set; }
 
+    public void AttachSocial(SocialLifeSystem social) => Decisions.Social = social;
+
     public void Tick()
     {
         foreach (var character in Population.All)

@@ -14,16 +14,19 @@ public sealed class CharacterDecisionSystem
     public CharacterDecisionSystem(
         GridNavigator navigator,
         ProductionSystem production,
-        TeachingSystem teaching)
+        TeachingSystem teaching,
+        SocialLifeSystem? social = null)
     {
         Navigator = navigator ?? throw new ArgumentNullException(nameof(navigator));
         Production = production ?? throw new ArgumentNullException(nameof(production));
         Teaching = teaching ?? throw new ArgumentNullException(nameof(teaching));
+        Social = social;
     }
 
     public GridNavigator Navigator { get; }
     public ProductionSystem Production { get; }
     public TeachingSystem Teaching { get; }
+    public SocialLifeSystem? Social { get; set; }
 
     public ActionKind ChooseKind(CharacterState character)
     {
@@ -35,6 +38,8 @@ public sealed class CharacterDecisionSystem
         if (SkillRules.IsDependent(character))
         {
             if (character.Needs.Hunger >= CharacterRules.HungerCritical && CanEatNow(character))
+                return ActionKind.Eat;
+            if (character.Needs.Hunger >= CharacterRules.HungerCritical && CaregiverHasFood(character))
                 return ActionKind.Eat;
             return ActionKind.Idle;
         }
@@ -52,7 +57,7 @@ public sealed class CharacterDecisionSystem
 
         if (character.Needs.Fatigue >= CharacterRules.FatigueCritical)
         {
-            var shelter = Production.FindShelter();
+            var shelter = FindPreferredShelter(character);
             if (shelter is null)
                 return ActionKind.Idle;
             return character.Position.Equals(shelter.AccessCell) ? ActionKind.Sleep : ActionKind.Move;
@@ -94,7 +99,7 @@ public sealed class CharacterDecisionSystem
                 BeginEat(character);
                 break;
             case ActionKind.Sleep:
-                var shelter = Production.FindShelter();
+                var shelter = FindPreferredShelter(character);
                 character.Activity.Start(
                     ActionKind.Sleep,
                     CharacterRules.SleepDurationTicks,
@@ -194,7 +199,7 @@ public sealed class CharacterDecisionSystem
         }
 
         if (target is null && character.Needs.Fatigue >= CharacterRules.FatigueCritical)
-            target = Production.FindShelter()?.AccessCell;
+            target = FindPreferredShelter(character)?.AccessCell;
 
         if (target is null)
         {
@@ -241,18 +246,50 @@ public sealed class CharacterDecisionSystem
 
     private bool CanEatNow(CharacterState character)
     {
-        if (character.Inventory.Has(ResourceType.Food, 1))
+        if (character.Inventory.Has(ResourceType.Food, 1) || character.Inventory.Has(ResourceType.WildBerries, 1))
             return true;
         var here = Production.BuildingAtAccess(character.Position);
-        return here is { Definition.IsStorage: true } && here.Inventory.Has(ResourceType.Food, 1);
+        return here is { Definition.IsStorage: true }
+            && (here.Inventory.Has(ResourceType.Food, 1) || here.Inventory.Has(ResourceType.WildBerries, 1));
     }
+
+    private bool CaregiverHasFood(CharacterState character)
+    {
+        foreach (var caregiver in FamilyQueries.CaregiversOf(Teaching.Population, character))
+        {
+            if (!caregiver.IsAlive)
+                continue;
+            if (caregiver.Inventory.Has(ResourceType.Food, 1) || caregiver.Inventory.Has(ResourceType.WildBerries, 1))
+                return true;
+        }
+
+        return false;
+    }
+
+    private BuildingState? FindPreferredShelter(CharacterState character) =>
+        Social?.HomeOf(character) ?? Production.FindShelter();
 
     private void TryTakeFood(CharacterState character)
     {
         var building = Production.BuildingAtAccess(character.Position);
         if (building is null || !building.Definition.IsStorage)
+        {
+            TryTakeFoodFromCaregiver(character);
             return;
-        building.Inventory.TryTransferTo(character.Inventory, ResourceType.Food, 1);
+        }
+        if (!building.Inventory.TryTransferTo(character.Inventory, ResourceType.Food, 1))
+            building.Inventory.TryTransferTo(character.Inventory, ResourceType.WildBerries, 1);
+    }
+
+    private void TryTakeFoodFromCaregiver(CharacterState character)
+    {
+        foreach (var caregiver in FamilyQueries.CaregiversOf(Teaching.Population, character))
+        {
+            if (caregiver.Inventory.TryTransferTo(character.Inventory, ResourceType.Food, 1))
+                return;
+            if (caregiver.Inventory.TryTransferTo(character.Inventory, ResourceType.WildBerries, 1))
+                return;
+        }
     }
 
     private bool AtAssignedWorkplace(CharacterState character)

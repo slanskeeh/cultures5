@@ -319,7 +319,13 @@ public sealed class SettlementSystem
                 stats.Workers++;
             else if (canWork)
                 stats.UnemployedAdults++;
+            if (character.Household.IsAssigned)
+                stats.Households++;
+            if (SkillRules.IsDependent(character))
+                stats.Dependents++;
         }
+
+        stats.Households = cluster.People.Select(p => p.Household.Value).Where(v => v != 0).Distinct().Count();
 
         foreach (var building in cluster.Buildings)
         {

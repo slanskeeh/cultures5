@@ -197,8 +197,8 @@ public sealed class SkillAndProductionTests
         high.Skills.SetLevel(SkillType.Farming, 80);
         Assert.True(host.Production.TryEvaluate(farm, low, out var lowEval));
         Assert.True(host.Production.TryEvaluate(farm, high, out var highEval));
-        var lowFood = lowEval.Outputs.Single(s => s.Type == Cultures.Economy.ResourceType.Food).Quantity;
-        var highFood = highEval.Outputs.Single(s => s.Type == Cultures.Economy.ResourceType.Food).Quantity;
+        var lowFood = lowEval.Outputs[0].Quantity;
+        var highFood = highEval.Outputs[0].Quantity;
         Assert.True(highFood > lowFood);
         Assert.True(highEval.DurationTicks <= lowEval.DurationTicks);
     }

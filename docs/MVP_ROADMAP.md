@@ -268,52 +268,142 @@ Not done (later / open):
 Exit criteria:
 Military identity and membership exist as simulation state. Combat outcomes feeding population, economy and diplomacy remain later.
 
-## Phase 13 — History and Presentation
+## Phase 13 — History and Presentation Architecture
 
-Status: NEXT
+Status: COMPLETED
 
-Goals:
-- historical UI;
-- family records;
-- notable buildings;
-- civilization timeline;
-- improved graphics;
-- audio;
-- polish.
+Delivered:
+- `HistoryRecorder` / `HistoryDirectory` as a fact store over domain events;
+- typed `HistoryEventId`; queries by character, settlement, faction, unit;
+- no gameplay consequences from recording;
+- presentation camera, ID selection, recreatable identity map;
+- organized debug HUD; exploration overlay does not leak raw terrain;
+- procedural debug textures for landscape, buildings, characters.
 
-## Phase 14 — Alpha
+Not done (later / open):
+- chronicle UI, family albums, audio, final art;
+- history as AI memory or player knowledge.
 
-Focus:
-- balance;
-- performance;
-- save stability;
-- simulation stability;
-- UX;
-- emergent story quality.
+Exit criteria:
+History exists as simulation facts. Presentation binds to domain IDs. Views remain recreatable.
 
-## Phase 15 — Beta / Content Expansion
+## Phase 14 — Full Persistence
 
-Focus:
-- more biomes;
-- animals;
-- factions;
-- professions;
-- buildings;
-- events;
-- diplomacy depth;
-- world variety.
+Status: COMPLETED
 
-## Phase 16 — Release Candidate
+Delivered:
+- `SaveEnvelope` v3 with authoritative dynamic state;
+- ID preservation and factory counter restore;
+- static terrain from seed + generation contract;
+- atomic restore; unsupported versions fail;
+- v2 remains header-only contract spawn.
 
-Focus:
-- optimization;
-- bug fixing;
-- save migrations;
-- accessibility;
-- onboarding;
-- packaging;
-- crash reporting.
+Not done (later / open):
+- binary/compressed format;
+- migrations beyond v2→v3 contract spawn;
+- autosave UX.
+
+Exit criteria:
+A debug world survives save, load, and continued ticks with the same IDs.
+
+## Phase 15 — Resources and Ecology
+
+Status: COMPLETED
+
+Delivered:
+- generated fertility and rivers;
+- persistent `ResourceDeposit` stocks (deplete/regenerate);
+- biome-driven recipes via `ContextualRecipeTable`;
+- chunk wildlife aggregates;
+- wrap-aware ecology; natural state in v3 saves.
+
+Not done (later / open):
+- named resource sites, hunting as character actions, hydrology simulation;
+- individual animals.
+
+Exit criteria:
+World resources exist independently of inventories. Production can depend on biome without forking building types.
+
+## Phase 16 — Professions, Households, Family Life
+
+Status: COMPLETED
+
+Delivered:
+- professions distinct from skills (`ProfessionCatalog`);
+- households distinct from genealogy; shelter homes;
+- partnership and household-aware birth;
+- infant caregiver feeding;
+- history facts for profession/household/partnership/home;
+- new state in v3 saves.
+
+Not done (later / open):
+- fertility rates, marriage ceremony, household property;
+- carrying infants; more professions.
+
+Exit criteria:
+Vocation, co-residence, and minimal infant care exist as simulation state without collapsing into skills or family trees.
+
+## Phase 17 — Alpha
+
+Status: COMPLETED
+
+Delivered:
+- `SimulationBalance` tunables;
+- clock speed 1–8x, saved with the world;
+- per-tick `Step` with diagnostics and last fault;
+- slot save/load (`ISaveStore`, F5/F9) and optional autosave;
+- history chronicle strings for HUD;
+- F1 help / first-run copy.
+
+Not done (later / open):
+- final balance numbers;
+- compressed saves;
+- GUI-verified HUD.
+
+Exit criteria:
+A headless debug world can be saved, loaded, sped up, and continued with diagnostics.
+
+## Phase 18 — Beta / Content Expansion
+
+Status: COMPLETED
+
+Delivered:
+- biomes Swamp, Savanna, Taiga as classifier remaps (generation version unchanged);
+- hunt command on wildlife aggregates;
+- Hunting Camp / Fishery buildings; Hunter / Fisher professions;
+- explicit diplomatic pacts (trade / non-aggression / alliance) without war;
+- season-changed history facts.
+
+Not done (later / open):
+- individual animals, hydrology, war, fertility rates;
+- more factions than the existing seed of 3.
+
+Exit criteria:
+Content expands existing systems. Hostile is still not war.
+
+## Phase 19 — Release Candidate
+
+Status: COMPLETED
+
+Delivered:
+- save envelope v4 with v3 migration;
+- atomic file slots;
+- accessibility: high-contrast map, HUD font cycle;
+- onboarding help text;
+- Windows Desktop export preset;
+- fault string on the host.
+
+Not done (later / open):
+- shipping an exported binary from this session;
+- crash reporter service;
+- accessibility beyond contrast/font;
+- onboarding tutorial beyond F1 copy.
+
+Exit criteria:
+Playtest build can be exported and a v3 save still loads. GUI keys were not clicked in an interactive window.
 
 ## Golden rule
 
 A phase is complete when its behavior is verified, not when code merely exists.
+
+The numbered foundation and playtest roadmap ends at Phase 19. Further work is content, balance, war, and polish under existing open ODs — not a Phase 20 unless a new prompt says so.

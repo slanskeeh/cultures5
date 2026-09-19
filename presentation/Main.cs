@@ -1,10 +1,13 @@
 using Cultures.Application;
+using Cultures.Application.Persistence;
+using Cultures.Application.Presentation;
 using Cultures.Buildings;
 using Cultures.Civilization;
 using Cultures.Economy;
 using Cultures.Core.Commands;
 using Cultures.Core.Ids;
 using Cultures.Exploration;
+using Cultures.History;
 using Cultures.Military;
 using Cultures.Population;
 using Cultures.Settlement;
@@ -35,16 +38,25 @@ public partial class Main : Control
     private int _selectedFactionIndex;
     private int _selectedGroupIndex;
     private int _selectedUnitIndex;
+    private PresentationCamera _camera = null!;
+    private readonly PresentationSelection _selection = new();
+    private readonly PresentationSettings _settings = new();
+    private FileSaveStore _saves = null!;
 
     public override void _Ready()
     {
-        _host = new SimulationHost(worldSeed: 1, world: WorldConfiguration.DebugSample);
+        _host = new SimulationHost(
+            worldSeed: 1,
+            world: WorldConfiguration.DebugSample,
+            balance: new SimulationBalance { AutosaveIntervalTicks = 240, HuntFoodYield = 2 });
+        _saves = new FileSaveStore(OS.GetUserDataDir());
         _hud = GetNode<ColorRect>("Hud");
         _label = GetNode<Label>("Hud/DebugLabel");
         _label.AddThemeFontSizeOverride("font_size", DebugFontSize);
         _label.VerticalAlignment = VerticalAlignment.Top;
         _map = GetNode<WorldDebugMap>("WorldDebugMap");
         _map.Host = _host;
+        _camera = new PresentationCamera(_host.Cursor.Position, WorldDebugMap.CellSize);
         SnapToSelected();
         ProtectSelected();
         Refresh();
@@ -171,6 +183,59 @@ public partial class Main : Control
             case Key.Key3:
                 DebugDisbandMilitaryUnit();
                 break;
+            case Key.Key4:
+                DebugMatchProfession();
+                break;
+            case Key.Key5:
+                DebugFormHousehold();
+                break;
+            case Key.Key6:
+                DebugSetHome();
+                break;
+            case Key.Key7:
+                DebugHunt();
+                break;
+            case Key.Key8:
+                DebugFormPact();
+                break;
+            case Key.Minus:
+                _host.Clock.SetSpeed(Math.Max(1, _host.Clock.Speed / 2));
+                _lastCommand = $"speed {_host.Clock.Speed}x";
+                break;
+            case Key.Equal:
+                _host.Clock.CycleSpeed();
+                _lastCommand = $"speed {_host.Clock.Speed}x";
+                break;
+            case Key.F1:
+                _settings.ShowHelp = !_settings.ShowHelp;
+                if (_settings.ShowHelp)
+                    _host.OnboardingComplete = true;
+                _lastCommand = _settings.ShowHelp ? "help on" : "help off";
+                break;
+            case Key.F5:
+                DebugSave();
+                break;
+            case Key.F9:
+                DebugLoad();
+                break;
+            case Key.F11:
+                _settings.HighContrast = !_settings.HighContrast;
+                _map.HighContrast = _settings.HighContrast;
+                _lastCommand = _settings.HighContrast ? "high contrast on" : "high contrast off";
+                break;
+            case Key.F12:
+                _settings.CycleHudFont();
+                _label.AddThemeFontSizeOverride("font_size", _settings.HudFontSize);
+                _lastCommand = $"hud {_settings.HudFontSize}px";
+                break;
+            case Key.Comma:
+                _camera.Zoom = Math.Max(8, _camera.Zoom - 2);
+                _lastCommand = $"camera zoom {_camera.Zoom}";
+                break;
+            case Key.Period:
+                _camera.Zoom = Math.Min(48, _camera.Zoom + 2);
+                _lastCommand = $"camera zoom {_camera.Zoom}";
+                break;
             default:
                 return;
         }
@@ -187,7 +252,7 @@ public partial class Main : Control
             while (_accumulator >= SecondsPerTick)
             {
                 _accumulator -= SecondsPerTick;
-                _host.Step(1);
+                _host.Step((ulong)_host.Clock.Speed);
             }
         }
 
@@ -228,6 +293,7 @@ public partial class Main : Control
         if (previous.IsPersistentIndividual)
             _host.Commands.Execute(new ProtectCharacterCommand(previous.Id, false));
         ProtectSelected();
+        _selection.Character = _host.Population[_selectedIndex].Id;
         _lastCommand = $"selected {_host.Population[_selectedIndex].Id}";
     }
 
@@ -236,6 +302,7 @@ public partial class Main : Control
         if (_host.Buildings.Count == 0)
             return;
         _selectedBuildingIndex = (_selectedBuildingIndex + 1) % _host.Buildings.Count;
+        _selection.Building = _host.Buildings[_selectedBuildingIndex].Id;
         _lastCommand = $"selected {_host.Buildings[_selectedBuildingIndex].Id}";
     }
 
@@ -288,6 +355,7 @@ public partial class Main : Control
         if (_host.Settlements.Count == 0)
             return;
         _selectedSettlementIndex = (_selectedSettlementIndex + 1) % _host.Settlements.Count;
+        _selection.Settlement = _host.Settlements[_selectedSettlementIndex].Id;
         _lastCommand = $"selected {_host.Settlements[_selectedSettlementIndex].Id}";
     }
 
@@ -499,6 +567,96 @@ public partial class Main : Control
             : result.Error ?? "disband failed";
     }
 
+    private void DebugMatchProfession()
+    {
+        if (_host.Population.Count == 0)
+            return;
+        var person = _host.Population[_selectedIndex];
+        var result = _host.Commands.Execute(new MatchProfessionCommand(person.Id));
+        _lastCommand = result.Success
+            ? $"{person.Id} profession {person.Profession}"
+            : result.Error ?? "profession failed";
+    }
+
+    private void DebugFormHousehold()
+    {
+        if (_host.Population.Count < 2)
+            return;
+        var a = _host.Population[_selectedIndex];
+        var b = _host.Population[(_selectedIndex + 1) % _host.Population.Count];
+        var result = _host.Commands.Execute(new FormPartnershipCommand(a.Id, b.Id));
+        if (!result.Success)
+            result = _host.Commands.Execute(new FormHouseholdCommand(a.Id, b.Id));
+        _lastCommand = result.Success
+            ? $"{a.Id} household {a.Household}"
+            : result.Error ?? "household failed";
+    }
+
+    private void DebugSetHome()
+    {
+        if (_host.Population.Count == 0)
+            return;
+        var person = _host.Population[_selectedIndex];
+        if (!person.Household.IsAssigned)
+        {
+            _lastCommand = "no household";
+            return;
+        }
+
+        var shelter = _host.Buildings.All.FirstOrDefault(b => b.Definition.IsShelter && b.IsActive);
+        if (shelter is null)
+        {
+            _lastCommand = "no shelter";
+            return;
+        }
+
+        var result = _host.Commands.Execute(new SetHouseholdHomeCommand(person.Household, shelter.Id));
+        _lastCommand = result.Success ? $"home {shelter.Id}" : result.Error ?? "home failed";
+    }
+
+    private void DebugHunt()
+    {
+        if (_host.Population.Count == 0)
+            return;
+        var person = _host.Population[_selectedIndex];
+        var result = _host.Commands.Execute(new HuntWildlifeCommand(person.Id));
+        _lastCommand = result.Success
+            ? $"{person.Id} hunted food {person.Inventory.GetQuantity(ResourceType.Food)}"
+            : result.Error ?? "hunt failed";
+    }
+
+    private void DebugFormPact()
+    {
+        if (_host.Civilization.Factions.Count < 2)
+            return;
+        var a = _host.Civilization.Factions[_selectedFactionIndex % _host.Civilization.Factions.Count];
+        var b = _host.Civilization.Factions[(_selectedFactionIndex + 1) % _host.Civilization.Factions.Count];
+        var result = _host.Commands.Execute(new FormDiplomaticPactCommand(a.Id, b.Id, DiplomaticPactKind.Trade));
+        _lastCommand = result.Success ? $"pact {a.Name} ↔ {b.Name}" : result.Error ?? "pact failed";
+    }
+
+    private void DebugSave()
+    {
+        _host.WriteSave(_saves, SaveSlots.Default);
+        _lastCommand = $"saved {SaveSlots.Default}";
+    }
+
+    private void DebugLoad()
+    {
+        try
+        {
+            _host = SimulationHost.LoadSave(_saves, SaveSlots.Default);
+            _map.Host = _host;
+            _selectedIndex = 0;
+            _camera = new PresentationCamera(_host.Cursor.Position, _camera.Zoom);
+            _lastCommand = $"loaded tick {_host.Clock.Tick}";
+        }
+        catch (Exception ex)
+        {
+            _lastCommand = $"load failed: {ex.Message}";
+        }
+    }
+
     private void DebugEvaluateSettlements()
     {
         var result = _host.Commands.Execute(new EvaluateSettlementsCommand());
@@ -545,7 +703,7 @@ public partial class Main : Control
             : $"{selected.Id} {selected.LifeStage} age {selected.AgeYears:0.0}  {selected.Position}  " +
               $"hunger {selected.Needs.Hunger:0.00}  fatigue {selected.Needs.Fatigue:0.00}  " +
               $"food {selected.Inventory.GetQuantity(ResourceType.Food)}  {selected.Activity.Kind}  " +
-              $"work {workplace}  {selected.Settlement}  {selected.Culture}  {selected.Faction}  {selected.PoliticalGroup}  {selected.MilitaryUnit}  lod {selected.LodTier}";
+              $"work {workplace}  {selected.Settlement}  {selected.Culture}  {selected.Faction}  {selected.PoliticalGroup}  {selected.MilitaryUnit}  job {selected.Profession}  home {selected.Household}  lod {selected.LodTier}";
         var familyLine = selected is null
             ? ""
             : $"parents {string.Join(",", selected.FamilyLinks.Parents.Select(id => id.Value.ToString()))}  " +
@@ -554,10 +712,12 @@ public partial class Main : Control
               $"partner {selected.Activity.PartnerId}  skill {selected.Activity.Skill?.ToString() ?? "-"}";
         var skillLine = selected is null
             ? ""
-            : $"farm {selected.Skills.GetLevel(SkillType.Farming)}  " +
+            :               $"farm {selected.Skills.GetLevel(SkillType.Farming)}  " +
               $"wood {selected.Skills.GetLevel(SkillType.Woodworking)}  " +
               $"stone {selected.Skills.GetLevel(SkillType.Stoneworking)}  " +
-              $"craft {selected.Skills.GetLevel(SkillType.Crafting)}";
+              $"craft {selected.Skills.GetLevel(SkillType.Crafting)}  " +
+              $"hunt {selected.Skills.GetLevel(SkillType.Hunting)}  " +
+              $"fish {selected.Skills.GetLevel(SkillType.Fishing)}";
 
         var buildingLine = inspectBuilding is null
             ? "no building"
@@ -632,28 +792,42 @@ public partial class Main : Control
         var unitLine = selectedUnit is null
             ? "no military unit"
             : $"{selectedUnit.Id} {selectedUnit.Name}  {selectedUnit.Lifecycle}  members {_host.Military.CountMembers(selectedUnit.Id)}  {selectedUnit.Faction}";
+        var historyLine = HistoryChronicle.RenderRecent(_host.History, 5);
+        var pacts = _host.Diplomacy.Pacts.Count;
+        var help = _settings.ShowHelp ? $"{PlayGuide.Intro}\n{PlayGuide.Controls}\n" : "";
+        var fertility = terrain.Fertility;
+        var wildlife = _host.World.Chunks.TryResolve(cursor.ToWorld(), out var address)
+            && _host.Ecology.Wildlife.TryGet(address.Chunk, out var pop)
+            ? $"deer {pop.Deer} sheep {pop.Sheep} boar {pop.Boar} birds {pop.Birds}"
+            : "wildlife -";
+        _camera.Follow(_host.Cursor.Position);
 
         _label.Text =
-            "CULTURES — PHASE 12  military\n" +
-            $"{paused}   seed {_host.WorldSeed}   people {_host.Population.Alive.Count()}/{_host.Population.Count}   " +
-            $"buildings {_host.Buildings.Count}   settlements {_host.Settlements.Count}   tick {date.Tick}\n" +
-            $"cursor {cursor}   {chunk}   {terrain.Biome} {water} elev {terrain.Elevation:0.00}\n" +
-            $"{characterLine}\n" +
+            help +
+            $"CULTURES — PHASE 19 RC  (17 alpha / 18 beta)\n" +
+            $"[sim] {paused}  {_host.Clock.Speed}x  seed {_host.WorldSeed}  people {_host.Population.Alive.Count()}/{_host.Population.Count}  " +
+            $"buildings {_host.Buildings.Count}  settlements {_host.Settlements.Count}  tick {date.Tick}  {_host.Diagnostics.Render()}\n" +
+            $"[world] cursor {cursor}  cam {_camera.Focus} z{_camera.Zoom}  {chunk}  {terrain.Biome} {water} " +
+            $"elev {terrain.Elevation:0.00} fert {fertility:0.00} river {terrain.HasRiver}  {wildlife}\n" +
+            $"[entity] {characterLine}\n" +
             $"{familyLine}\n" +
             $"{skillLine}\n" +
             $"{buildingLine}\n" +
             $"{settlementLine}\n" +
-            $"{lodLine}\n" +
+            $"[explore] {lodLine}\n" +
             $"{explorationLine}\n" +
-            $"{factionLine}\n" +
-            $"{relationLine}\n" +
+            $"[faction] {factionLine}\n" +
+            $"{relationLine}  pacts {pacts}\n" +
             $"{politicsLine}\n" +
             $"{groupLine}\n" +
-            $"{militaryLine}\n" +
+            $"[military] {militaryLine}\n" +
             $"{unitLine}\n" +
+            $"[history] {historyLine}\n" +
             $"last: {_lastCommand}\n" +
             "Arrows cursor   Tab person   C follow   B/V building   M/U settlement   E detect   L lod   O refresh   9 agg  0 full\n" +
-            "P faction   J join   H diplomacy   I group   Y affiliate   W stability   1/2 influence   X unit   Z enlist   3 disband   Q overlay   R rumor   S scout   D map   F confirm   A analyze   Space";
+            "P faction   J join   H diplomacy   I group   Y affiliate   W stability   1/2 influence   X unit   Z enlist   3 disband\n" +
+            "4 profession   5 household   6 home   7 hunt   8 pact   -/= speed   F1 help   F5 save   F9 load   F11 contrast   F12 HUD\n" +
+            ",/. camera zoom   Q overlay   R rumor   S scout   D map   F confirm   A analyze   Space";
 
         FitDebugHud();
         _map.QueueRedraw();

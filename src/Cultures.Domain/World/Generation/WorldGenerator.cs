@@ -53,8 +53,14 @@ public sealed class WorldGenerator
         var moisture = Clamp01(0.22f + equator * 0.48f + (moistNoise - 0.5f) * 0.36f);
         var climate = new ClimateSample(temperature, moisture);
         var biome = Classify(elevation, isWater, climate);
-
-        return new GeneratedTerrain(elevation, isWater, climate, biome);
+        var riverNoise = SampleWrapped(x, y, 3.40f, 3.55f, 5);
+        var hasRiver = !isWater
+            && moisture >= 0.50f
+            && elevation >= Configuration.SeaLevel
+            && elevation < 0.78f
+            && riverNoise < 0.18f;
+        var fertility = EcologyRules.Fertility(new GeneratedTerrain(elevation, isWater, climate, biome, hasRiver));
+        return new GeneratedTerrain(elevation, isWater, climate, biome, hasRiver, fertility);
     }
 
     public GeneratedTerrain[] GetChunk(ChunkCoordinate chunk)
@@ -104,7 +110,16 @@ public sealed class WorldGenerator
             return BiomeId.Desert;
 
         if (climate.Moisture >= 0.55f && climate.Temperature >= 0.32f)
+        {
+            if (climate.Temperature <= 0.38f)
+                return BiomeId.Taiga;
+            if (climate.Moisture >= 0.68f && elevation < 0.46f)
+                return BiomeId.Swamp;
             return BiomeId.Forest;
+        }
+
+        if (climate.Temperature >= 0.52f && climate.Moisture is >= 0.38f and <= 0.54f)
+            return BiomeId.Savanna;
 
         return BiomeId.TemperateLand;
     }

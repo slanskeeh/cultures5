@@ -15,11 +15,16 @@ public sealed class SimulationClock
     public SimulationCalendar Calendar { get; }
     public ulong Tick { get; private set; }
     public bool IsPaused { get; private set; }
+    public int Speed { get; private set; } = 1;
     public CalendarDate Date => Calendar.FromTick(Tick);
 
     public void Pause() => IsPaused = true;
     public void Resume() => IsPaused = false;
     public void SetPaused(bool paused) => IsPaused = paused;
+
+    public void SetSpeed(int speed) => Speed = Math.Clamp(speed, 1, 8);
+
+    public void CycleSpeed() => SetSpeed(Speed >= 8 ? 1 : Speed * 2);
 
     /// <summary>
     /// Advances the clock by <paramref name="ticks"/> unless paused.

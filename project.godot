@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="Cultures"
-config/description="Simulation-first successor project. Phase 0 technical foundation."
+config/description="Simulation-first successor. Playtest RC: save/load, ecology, households, history."
 run/main_scene="res://presentation/Main.tscn"
 config/features=PackedStringArray("4.7", "C#", "Forward Plus")
 config/icon="res://icon.svg"

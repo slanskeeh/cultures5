@@ -412,7 +412,9 @@ Not fixed yet.
 Foundation exists; final gameplay pacing not fixed.
 
 ### OD-005 — Exact save format
-Versioned JSON foundation exists; final binary/compressed strategy not fixed.
+**Status:** Closed for current JSON envelope; compression/binary still later.
+
+Versioned JSON `SaveEnvelope` v4 is the current format (AD-107, AD-118). Final binary/compressed strategy is not fixed.
 
 ### OD-006 — Exact rendering pipeline
 Godot 2D is accepted; final TileMap/atlas/animation conventions are not fixed.
@@ -676,10 +678,14 @@ Examples requiring future design:
 Not fixed. XP per work/teach, inheritance permille, and the production bonus threshold are provisional (`SkillRules`).
 
 ### OD-016 — Reproduction, marriage, and fertility
-Not fixed. Phase 5 birth is a debug/command mechanism with a population cap.
+**Status:** Open (partial)
+
+Partnership (`FormPartnershipCommand`) and household-aware birth exist. Fertility rates, pregnancy duration, marriage ceremony, and automatic pairing are not modeled. Debug `CreateChildCommand` remains.
 
 ### OD-017 — Household versus genealogy
-`FamilyLinks` are parent/child IDs. Characters carry `HouseholdId.None` as a Phase 6 seam. `FamilyId` is unused. Household membership, home, and property remain unimplemented.
+**Status:** Closed
+
+`FamilyLinks` remain parent/child genealogy. `HouseholdState` is co-residence with optional shelter home (AD-113). `FamilyId` is still unused as a named-lineage object.
 
 ## AD-058 — Settlements emerge from occupancy clustering
 
@@ -737,12 +743,12 @@ Future taxation/trade need granular ownership. Current inventories stay on chara
 
 ## AD-064 — Culture and household remain seams
 
-Status: Accepted (temporary)
+Status: Superseded in part
 
-Settlements store `CultureId.Neutral` and `CharacterId Leader = None`. Characters store `HouseholdId.None`. Phase 6 does not implement factions, leadership, or households.
+Settlements still store default `CultureId.Neutral` and `Leader = None`. Households are implemented in Phase 16 (AD-113). Factions exist since Phase 9. Leadership selection remains OD-021.
 
 Reason:
-The data model must not assume one culture or Family == Household == Settlement.
+The data model must not assume Family == Household == Settlement. That separation still holds.
 
 ## AD-065 — Newborns start at age 0 as Infant
 
@@ -788,9 +794,9 @@ Phase 6 uses a deterministic `set.{hex}` name key. Final faction-language names 
 
 ## OD-022 — Infant care
 
-**Status:** Open
+**Status:** Closed (minimal)
 
-Infants idle unless they already have food to eat. Caregiver feeding, carrying, and household care are not simulated yet.
+Infants may eat from caregiver inventory (AD-114). Carrying, dedicated care activities, and nursing economy are not simulated.
 
 ## AD-067 — Simulation LOD is independent of presentation
 
@@ -1122,6 +1128,186 @@ Units have no location, path, or chunk ownership. `LogicalGridCoordinate` remain
 Reason:
 Movement and hex conversion are out of scope. Future occupancy can attach world cells without rewriting military identity.
 
+## AD-103 — History is a first-class fact store
+
+Status: Accepted
+
+`HistoryRecorder` observes domain events and stores `HistoryRecord` entries with typed `HistoryEventId`. Queries exist by character, settlement, faction, military unit, and recent chronology. History is not AI memory, not exploration knowledge, and not a notification queue.
+
+Reason:
+AD-016 required history as a feature. Phase 13 records facts without inventing a chronicle UI or LLM narration.
+
+## AD-104 — History does not create gameplay
+
+Status: Accepted
+
+Recording a fact never mutates population, economy, diplomacy, politics, military, exploration, LOD, or terrain. `HistoryRecorder.IsEnabled` exists so restore can insert saved records without re-firing listeners. `SimulationHost.Step` does not tick history.
+
+Reason:
+History is an observer. Consequences of events already happened in their own systems.
+
+## AD-105 — History is independent of LOD and exploration
+
+Status: Accepted
+
+History does not store per-tick hunger, pathfinding, LOD classification, or exploration spam. Aggregate births/deaths are demographic facts, not fake individual deaths. Distant simulation can still produce history when the originating system publishes an event.
+
+Reason:
+LOD must not invent biographies. Exploration knowledge is player/world knowledge, not chronology.
+
+## AD-106 — Presentation identity uses domain IDs
+
+Status: Accepted
+
+`PresentationCamera`, `PresentationSelection`, and `PresentationIdentityMap` live in Application. Camera focus and zoom are not `SimulationCursor`. Selection stores `CharacterId` / `BuildingId` / `SettlementId`. Views are recreatable from IDs in a camera window. Godot nodes must not become identity.
+
+Reason:
+The simulation stays meaningful without sprites. Reloading a scene must rebind to the same IDs.
+
+## AD-107 — Save envelope v3 stores authoritative dynamic state
+
+Status: Accepted
+
+`SaveEnvelope.CurrentVersion = 4`. v3 stores dynamic state. v4 adds pacts, clock speed, and onboarding. v2 remains header-only. `SaveMigrations.ToCurrent` upgrades v3. Unsupported versions fail load. Static terrain is reconstructed from seed + generation version (AD-029).
+
+Reason:
+OD-005 and OD-036 required a real save, not a seed replay. Silent upgrade of v2 into v3 would hide missing state.
+
+## AD-108 — Restore is atomic and ID-preserving
+
+Status: Accepted
+
+`SimulationPersistence.Restore` validates version, seed, generation, and world size, then restores directories by `Add` with saved IDs. `EntityIdFactory.Restore` continues counters so new IDs never collide. History is disabled during restore so saved facts are not duplicated. Settlement detection is not re-run after load; restored settlements are authoritative. Derived LOD is re-evaluated after restore.
+
+Reason:
+A half-loaded world is worse than a failed load. Indexes are never IDs (AD-009).
+
+## AD-109 — Resource deposits are not inventory
+
+Status: Accepted
+
+Natural stocks live in `ResourceDeposit` / `ResourceDepositDirectory` with typed `ResourceDepositId`. Character and building inventories remain `Inventory`. Deposits deplete on extraction and regenerate on a slow ecology cadence. Terrain fertility and rivers are generated fields, not items.
+
+Reason:
+World resources must persist independently of who currently holds goods.
+
+## AD-110 — Contextual production is data-driven
+
+Status: Accepted
+
+`ContextualRecipeTable` plus `ContextualEnvironmentProductionModifier` select recipes and modifiers from biome/fertility/rivers. Farm + Forest yields berries; Farm + plains yields food; Workshop + Highland can yield stone. Neutral modifier remains for tests that isolate worker/skill math. Building types are not forked per biome.
+
+Reason:
+AD-039 already required a modifier seam. Phase 15 fills the table instead of hard-coding product if-chains.
+
+## AD-111 — Wildlife is a chunk aggregate
+
+Status: Accepted
+
+`WildlifePresence` stores deer/sheep/boar/bird counts per chunk. Wildlife is not a roster of animal `CharacterId`s. Regeneration is wrap-aware and independent of presentation.
+
+Reason:
+Individual animals at world scale would explode entity count. Aggregate ecology is enough for Phase 15.
+
+## AD-112 — Profession is not skill
+
+Status: Accepted
+
+`ProfessionId` / `ProfessionCatalog` (Farmer, Woodcutter, Mason, Crafter) is a vocation. Skills remain XP on `CharacterSkills`. Changing profession does not grant skill. Unemployed adults may still work any compatible workplace; an assigned profession restricts workplaces (`BuildingDefinition.RequiredProfession` on farm). Children cannot take professions.
+
+Reason:
+AD-052 already separated skills from jobs. Phase 16 makes vocation explicit without collapsing the two.
+
+## AD-113 — Household is not genealogy
+
+Status: Accepted
+
+`HouseholdState` is a co-residence group with optional shelter `Home`. Genealogy stays on `FamilyLinks`. `CharacterState.Household` is derived membership (at most one household). Partnership is reciprocal `Partner` and may form a household. Birth copies the parent's household. Home must be a shelter building.
+
+Reason:
+OD-017. Family tree, house, and settlement are different groupings.
+
+## AD-114 — Infant care is caregiver feeding
+
+Status: Accepted (minimal)
+
+Infants still do not work, teach, or path independently. If hungry, an infant may eat food from a caregiver inventory (parents/household caregivers) without a dedicated Carry action. Detailed carrying, nursing rates, and household property remain later.
+
+Reason:
+OD-022 needed a real care path so infants are not stranded idle with food sitting on an adult.
+
+## AD-115 — Simulation balance is a tunable object
+
+Status: Accepted
+
+`SimulationBalance` holds Alpha tunables (hunt yield, autosave interval, max speed). Systems read it from the host. It is not a god-object and does not replace domain rules classes.
+
+Reason:
+Phase 17 asked for balance as a layer, not scattered magic numbers in presentation.
+
+## AD-116 — Clock speed is domain state
+
+Status: Accepted
+
+`SimulationClock.Speed` is 1/2/4/8. Presentation requests `Step(Speed)` per tick budget. Speed is saved in the envelope. Pause still blocks `Advance`.
+
+Reason:
+Time scale is simulation policy, not a Godot timer hack.
+
+## AD-117 — Step is per-tick and fault-tolerant
+
+Status: Accepted
+
+`SimulationHost.Step` advances one simulation tick at a time so clock and systems stay aligned. A thrown exception is recorded on `SimulationDiagnostics` and stops further ticks in that call. One `TickAdvancedEvent` is published for the whole request.
+
+Reason:
+Phase 17 stability. A bulk clock jump before systems tick left calendar ahead of the world.
+
+## AD-118 — Save UX uses slots, not a scene
+
+Status: Accepted
+
+`ISaveStore` (`MemorySaveStore`, `FileSaveStore` with temp+move) writes JSON slots. Presentation maps F5/F9 to `user://`. Autosave is optional via `SimulationBalance.AutosaveIntervalTicks` (0 = off in tests).
+
+Reason:
+Headless tests must save without Godot. File writes must be atomic.
+
+## AD-119 — New biomes remap existing climate, not a new noise contract
+
+Status: Accepted
+
+Swamp, Savanna, and Taiga are classifier refinements of Forest/TemperateLand. `WorldGeneration.CurrentVersion` stays 1 so elevation and land/water do not change. Recipes: swamp/taiga farms yield berries; savanna farms yield food.
+
+Reason:
+Bumping generation version mixed a new noise seed and broke wrap/settlement tests. Biome variety must not silently relocate continents.
+
+## AD-120 — Wildlife hunting is aggregate extraction
+
+Status: Accepted
+
+`HuntWildlifeCommand` depletes chunk wildlife and adds Food. Unemployed adults may hunt; an assigned non-Hunter may not. Hunting is not combat, not war, and does not create animal `CharacterId`s.
+
+Reason:
+AD-111 wildlife is aggregate. Phase 18 asked for animals without an entity explosion.
+
+## AD-121 — Diplomatic pacts are explicit and consequence-free
+
+Status: Accepted
+
+Trade / NonAggression / Alliance pacts are stored with `DiplomaticPactId`. Hostile cannot trade. Alliance requires Friendly. Forming or breaking a pact does not move goods, change membership, or declare war. Hostile remains a stance only.
+
+Reason:
+Phase 18 diplomacy depth without violating AD-091 / AD-100 / OD-040.
+
+## AD-122 — Season changes are world facts
+
+Status: Accepted
+
+`WorldEventSystem` publishes `SeasonChangedEvent` when the calendar season index changes. History records it. The first observed season is not recorded. Seasons do not cause famine, war, or migration in this phase.
+
+Reason:
+Emergent chronology without scripted quests or automatic disasters.
+
 ## OD-023 — Exact LOD radii and cadences
 
 **Status:** Open
@@ -1202,9 +1388,9 @@ Joining a faction does not overwrite `CharacterState.Culture`. Whether members s
 
 ## OD-036 — Persisting civilizations in the save envelope
 
-**Status:** Open
+**Status:** Closed
 
-Mapper DTOs exist. Envelope v2 does not include cultures, factions, relations or character affiliation.
+Envelope v3 persists cultures, factions, relations, political groups, stability, military units, and character affiliation (AD-107). v2 remains header-only.
 
 ## OD-037 — CivilizationId versus FactionId
 

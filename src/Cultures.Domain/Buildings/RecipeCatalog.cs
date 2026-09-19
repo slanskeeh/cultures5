@@ -33,9 +33,29 @@ public sealed class RecipeCatalog
             outputs: [new ResourceStack(ResourceType.Food, 1)],
             skill: SkillType.Farming),
         new ProductionRecipe(
+            RecipeId.FarmBerries,
+            durationTicks: 20,
+            outputs: [new ResourceStack(ResourceType.WildBerries, 1)],
+            skill: SkillType.Farming),
+        new ProductionRecipe(
             RecipeId.WorkshopWood,
             durationTicks: 20,
             outputs: [new ResourceStack(ResourceType.Wood, 1)],
-            skill: SkillType.Woodworking)
+            skill: SkillType.Woodworking),
+        new ProductionRecipe(
+            RecipeId.WorkshopStone,
+            durationTicks: 22,
+            outputs: [new ResourceStack(ResourceType.Stone, 1)],
+            skill: SkillType.Stoneworking),
+        new ProductionRecipe(
+            RecipeId.HuntFood,
+            durationTicks: 18,
+            outputs: [new ResourceStack(ResourceType.Food, 1)],
+            skill: SkillType.Hunting),
+        new ProductionRecipe(
+            RecipeId.FisheryFood,
+            durationTicks: 18,
+            outputs: [new ResourceStack(ResourceType.Food, 1)],
+            skill: SkillType.Fishing)
     ]);
 }

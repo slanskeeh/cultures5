@@ -76,6 +76,28 @@ public sealed class CharacterActivity
         RemainingPath.Clear();
     }
 
+    public void Restore(
+        ActionKind kind,
+        int durationTicks,
+        int progressTicks,
+        LogicalGridCoordinate? target,
+        CharacterId partner,
+        SkillType? skill,
+        IEnumerable<LogicalGridCoordinate>? path)
+    {
+        Kind = kind;
+        DurationTicks = Math.Max(0, durationTicks);
+        ProgressTicks = Math.Max(0, progressTicks);
+        Target = target;
+        PartnerId = partner;
+        Skill = skill;
+        RemainingPath.Clear();
+        if (path is null)
+            return;
+        foreach (var step in path)
+            RemainingPath.Enqueue(step);
+    }
+
     public void Cancel()
     {
         Kind = ActionKind.None;

@@ -113,6 +113,8 @@ public sealed class CharacterCreation
         if (second is not null)
             parents.Add(second);
         child.Skills.InheritFrom(parents);
+        if (first.Household.IsAssigned)
+            child.Household = first.Household;
         Population.Add(child);
         Events.Publish(new ChildBornEvent(Clock.Tick, child.Id, first.Id, second?.Id ?? CharacterId.None));
         return true;

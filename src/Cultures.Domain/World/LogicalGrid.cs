@@ -77,4 +77,13 @@ public sealed class LogicalGrid
         occupied = occupancy.IsOccupied;
         return true;
     }
+
+    public IEnumerable<(LogicalGridCoordinate Cell, Occupancy Occupancy)> OccupancyEntries
+    {
+        get
+        {
+            foreach (var pair in _occupancy)
+                yield return (new LogicalGridCoordinate(pair.Key.X, pair.Key.Y), pair.Value);
+        }
+    }
 }

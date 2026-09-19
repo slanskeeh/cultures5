@@ -19,6 +19,13 @@ public sealed class BuildingProductionState
         ProgressTicks = 0;
     }
 
+    public void Restore(RecipeId? recipe, int progressTicks, int durationTicks)
+    {
+        CurrentRecipe = recipe;
+        ProgressTicks = Math.Max(0, progressTicks);
+        DurationTicks = Math.Max(0, durationTicks);
+    }
+
     public void Advance()
     {
         if (CurrentRecipe is not null)

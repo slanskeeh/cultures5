@@ -8,7 +8,9 @@ public enum SkillType : byte
     Farming = 1,
     Woodworking = 2,
     Stoneworking = 3,
-    Crafting = 4
+    Crafting = 4,
+    Hunting = 5,
+    Fishing = 6
 }
 
 public readonly record struct SkillValue(SkillType Type, int Experience, int Level);

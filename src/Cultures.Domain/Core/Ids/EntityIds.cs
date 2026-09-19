@@ -113,3 +113,27 @@ public readonly record struct MigrationGroupId(ulong Value) : IEntityId
     public bool Equals(IEntityId? other) => other is MigrationGroupId id && Value == id.Value;
     public override string ToString() => $"MigrationGroup:{Value}";
 }
+
+public readonly record struct HistoryEventId(ulong Value) : IEntityId
+{
+    public static HistoryEventId None => new(0);
+    public bool IsAssigned => Value != 0;
+    public bool Equals(IEntityId? other) => other is HistoryEventId id && Value == id.Value;
+    public override string ToString() => $"History:{Value}";
+}
+
+public readonly record struct ResourceDepositId(ulong Value) : IEntityId
+{
+    public static ResourceDepositId None => new(0);
+    public bool IsAssigned => Value != 0;
+    public bool Equals(IEntityId? other) => other is ResourceDepositId id && Value == id.Value;
+    public override string ToString() => $"Deposit:{Value}";
+}
+
+public readonly record struct DiplomaticPactId(ulong Value) : IEntityId
+{
+    public static DiplomaticPactId None => new(0);
+    public bool IsAssigned => Value != 0;
+    public bool Equals(IEntityId? other) => other is DiplomaticPactId id && Value == id.Value;
+    public override string ToString() => $"Pact:{Value}";
+}

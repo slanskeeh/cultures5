@@ -61,11 +61,11 @@ WorldSeed
 → elevation
 → mountains
 → climate
-→ rivers/lakes
-→ biome
-→ soil/fertility
-→ resources
-→ wildlife
+→ rivers (noise overlay on land)
+→ biome (Ocean, Ice, Tundra, TemperateLand, Forest, Desert, Highland, Swamp, Savanna, Taiga)
+→ soil/fertility (moisture/elevation/river)
+→ resources (lazy cell deposits)
+→ wildlife (chunk aggregates)
 → landmarks
 → civilizations
 → settlements
@@ -176,7 +176,9 @@ The desired visual direction is:
 - readable silhouettes;
 - limited visual noise.
 
-Large visual assets can occupy multiple logical cells.
+Phase 13 debug map paints procedural 32×32 `ImageTexture` tiles for biomes, building types, and character life stages (`SimpleTextures`). Not final art. Unexplored cells use knowledge colors only; raw biome is not leaked.
+
+Large visual assets can occupy multiple logical cells. Camera zoom is presentation-only.
 
 ## 13. Building placement
 

@@ -28,6 +28,8 @@ public sealed class CharacterState
         Faction = FactionId.None;
         PoliticalGroup = PoliticalGroupId.None;
         MilitaryUnit = MilitaryUnitId.None;
+        Profession = ProfessionId.None;
+        Partner = CharacterId.None;
         AssignedWorkplace = WorkplaceId.None;
     }
 
@@ -51,6 +53,8 @@ public sealed class CharacterState
     public FactionId Faction { get; set; }
     public PoliticalGroupId PoliticalGroup { get; set; }
     public MilitaryUnitId MilitaryUnit { get; set; }
+    public ProfessionId Profession { get; set; }
+    public CharacterId Partner { get; set; }
     public SimulationLodTier LodTier { get; set; } = SimulationLodTier.Full;
     public bool IsPersistentIndividual { get; set; }
     public bool IsPlayerCommanded { get; set; }

@@ -52,6 +52,9 @@ public sealed class BuildingPlacementSystem
                 return PlacementResult.Fail("Cell is already occupied.");
         }
 
+        if (definition.RequiresWaterAdjacent && !HasAdjacentWater(cells))
+            return PlacementResult.Fail("Building must be adjacent to water.");
+
         if (!TryFindAccess(cells, out var access))
             return PlacementResult.Fail("No passable access cell.");
 
@@ -78,6 +81,20 @@ public sealed class BuildingPlacementSystem
 
         Buildings.Add(building);
         return PlacementResult.Ok(building);
+    }
+
+    public void Restore(BuildingState building)
+    {
+        ArgumentNullException.ThrowIfNull(building);
+        Buildings.Add(building);
+        if (!building.Definition.OccupiesCells)
+            return;
+        foreach (var cell in building.FootprintCells)
+        {
+            World.Grid.TrySetOccupancy(
+                cell.ToWorld(),
+                Occupancy.ForBuilding(building.Id, building.Definition.BlocksMovement));
+        }
     }
 
     public PlacementResult TryRemove(BuildingId id)
@@ -124,6 +141,24 @@ public sealed class BuildingPlacementSystem
         }
 
         access = default;
+        return false;
+    }
+
+    private bool HasAdjacentWater(IReadOnlyList<LogicalGridCoordinate> footprint)
+    {
+        var occupied = footprint.ToHashSet();
+        foreach (var cell in footprint)
+        {
+            foreach (var (dx, dy) in AccessOrder)
+            {
+                var resolution = World.Topology.Resolve(cell.X + dx, cell.Y + dy);
+                if (!resolution.TryGetCell(out var neighbor) || occupied.Contains(neighbor))
+                    continue;
+                if (World.Grid.GetCell(neighbor).IsWater)
+                    return true;
+            }
+        }
+
         return false;
     }
 }

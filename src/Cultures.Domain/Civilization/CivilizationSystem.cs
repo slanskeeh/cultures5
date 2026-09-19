@@ -26,7 +26,7 @@ public sealed class CivilizationSystem
         Cultures = new CultureDirectory();
         Factions = new FactionDirectory();
         Relations = new FactionRelationDirectory();
-        Diplomacy = new DiplomacySystem(Factions, Relations, Events, Clock);
+        Diplomacy = new DiplomacySystem(Factions, Relations, Ids, Events, Clock);
         EnsureNeutralCulture();
     }
 

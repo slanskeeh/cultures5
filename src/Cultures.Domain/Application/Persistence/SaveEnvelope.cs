@@ -1,17 +1,17 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Cultures.Core.Time;
 using Cultures.World;
 
 namespace Cultures.Application.Persistence;
 
 /// <summary>
-/// Versioned save envelope. Static terrain is reconstructed from seed + generation contract,
-/// not stored cell-by-cell.
+/// Versioned save envelope. Static terrain is reconstructed from seed + generation contract.
+/// v2 is header-only. v3 stores dynamic state. v4 adds pacts, speed, and session flags.
 /// </summary>
 public sealed record SaveEnvelope
 {
-    public const int CurrentVersion = 2;
+    public const int CurrentVersion = 4;
+    public const int MinimumSupportedVersion = 2;
 
     public int SaveVersion { get; init; } = CurrentVersion;
     public ulong WorldSeed { get; init; }
@@ -21,7 +21,47 @@ public sealed record SaveEnvelope
     public int WorldHeight { get; init; }
     public int ChunkWidth { get; init; }
     public int ChunkHeight { get; init; }
+    public int CursorX { get; init; }
+    public int CursorY { get; init; }
+    public EntityIdCountersRecord? Ids { get; init; }
+    public List<CharacterSaveRecord>? Characters { get; init; }
+    public List<BuildingSaveRecord>? Buildings { get; init; }
+    public List<SettlementSaveRecord>? Settlements { get; init; }
+    public List<HouseholdSaveRecord>? Households { get; init; }
+    public List<CultureRecord>? Cultures { get; init; }
+    public List<FactionRecord>? Factions { get; init; }
+    public List<FactionRelationRecord>? Relations { get; init; }
+    public List<PoliticalGroupRecord>? PoliticalGroups { get; init; }
+    public List<InternalPoliticsRecord>? Stability { get; init; }
+    public List<MilitaryUnitRecord>? MilitaryUnits { get; init; }
+    public List<ExplorationKnowledgeRecord>? Exploration { get; init; }
+    public List<HistorySaveRecord>? History { get; init; }
+    public List<DepositSaveRecord>? Deposits { get; init; }
+    public List<WildlifeSaveRecord>? Wildlife { get; init; }
+    public List<LodOverrideRecord>? LodOverrides { get; init; }
+    public List<OccupancySaveRecord>? Occupancy { get; init; }
+    public List<DiplomaticPactSaveRecord>? Pacts { get; init; }
+    public int Speed { get; init; } = 1;
+    public bool OnboardingComplete { get; init; }
 }
+
+public sealed record EntityIdCountersRecord(
+    ulong NextCharacter,
+    ulong NextFamily,
+    ulong NextHousehold,
+    ulong NextBuilding,
+    ulong NextSettlement,
+    ulong NextCivilization,
+    ulong NextCulture,
+    ulong NextFaction,
+    ulong NextPoliticalGroup,
+    ulong NextMilitaryUnit,
+    ulong NextHistoryEvent,
+    ulong NextResourceDeposit,
+    ulong NextDiplomaticPact,
+    ulong NextRegion,
+    ulong NextChunk,
+    ulong NextMigrationGroup);
 
 public sealed class SaveSerializer
 {
@@ -46,30 +86,12 @@ public sealed class SaveSerializer
         var envelope = JsonSerializer.Deserialize<SaveEnvelope>(json, Options)
             ?? throw new InvalidOperationException("Save JSON deserialized to null.");
 
-        if (envelope.SaveVersion <= 0)
-            throw new InvalidOperationException("Save version must be positive.");
-
-        return envelope;
-    }
-}
-
-public static class SaveEnvelopeFactory
-{
-    public static SaveEnvelope FromHost(ulong worldSeed, SimulationClock clock, LogicalWorld world)
-    {
-        ArgumentNullException.ThrowIfNull(clock);
-        ArgumentNullException.ThrowIfNull(world);
-        var cfg = world.Configuration;
-        return new SaveEnvelope
+        if (envelope.SaveVersion < SaveEnvelope.MinimumSupportedVersion
+            || envelope.SaveVersion > SaveEnvelope.CurrentVersion)
         {
-            SaveVersion = SaveEnvelope.CurrentVersion,
-            WorldSeed = worldSeed,
-            SimulationTick = clock.Tick,
-            GenerationVersion = cfg.GenerationVersion,
-            WorldWidth = cfg.Width,
-            WorldHeight = cfg.Height,
-            ChunkWidth = cfg.ChunkWidth,
-            ChunkHeight = cfg.ChunkHeight
-        };
+            throw new InvalidOperationException($"Unsupported save version {envelope.SaveVersion}.");
+        }
+
+        return SaveMigrations.ToCurrent(envelope);
     }
 }
