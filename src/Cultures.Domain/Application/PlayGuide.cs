@@ -8,8 +8,8 @@ public static class PlayGuide
     public const string Title = "Kinlands playtest";
 
     public const string Intro =
-        "Watch people live. Assign work, form households, and explore. The world keeps simulating off-screen.";
+        "People eat, sleep, and work. Starting jobs need no skill: gather wood, stone, clay, or mushrooms; hunt; fish; build; scout; haul. Click someone, assign a job, and they will do it.";
 
     public const string Controls =
-        "Space pause  -/= speed  F1 help  F5 save  F9 load  F11 contrast  F12 HUD size  7 hunt  8 pact  Arrows cursor";
+        "Click person  click ground to walk  MMB pan  edge scroll  F2/F3 job  F4 work  F6 stop  F7 hut  Space pause  -/= speed 1-3  F1 help";
 }

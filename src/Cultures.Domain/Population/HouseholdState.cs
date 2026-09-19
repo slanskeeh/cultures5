@@ -135,13 +135,15 @@ public sealed class SocialLifeSystem
         var bestSkill = -1;
         foreach (var definition in Professions.All)
         {
-            var skill = character.Skills.GetLevel(definition.PrimarySkill);
-            if (skill < bestSkill)
+            if (!definition.RequiresTraining || definition.PrimarySkill is not { } skill)
                 continue;
-            if (skill == bestSkill && best is not null && string.CompareOrdinal(definition.Id.Value, best.Id.Value) >= 0)
+            var level = character.Skills.GetLevel(skill);
+            if (level < bestSkill)
+                continue;
+            if (level == bestSkill && best is not null && string.CompareOrdinal(definition.Id.Value, best.Id.Value) >= 0)
                 continue;
             best = definition;
-            bestSkill = skill;
+            bestSkill = level;
         }
 
         if (best is null)

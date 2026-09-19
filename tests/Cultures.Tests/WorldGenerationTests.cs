@@ -208,6 +208,39 @@ public sealed class WorldGenerationTests
         Assert.True(seam < far);
     }
 
+    [Fact]
+    public void Larger_world_stretches_biome_regions()
+    {
+        var small = new LogicalWorld(WorldConfiguration.DebugSample, 3);
+        var large = new LogicalWorld(WorldConfiguration.Playtest, 3);
+        Assert.True(
+            LongestBiomeRun(large, large.Configuration.Height / 2)
+            > LongestBiomeRun(small, small.Configuration.Height / 2));
+    }
+
+    private static int LongestBiomeRun(LogicalWorld world, int y)
+    {
+        var longest = 1;
+        var run = 1;
+        var previous = world.Grid.GetCell(new LogicalGridCoordinate(0, y)).Biome;
+        for (var x = 1; x < world.Configuration.Width; x++)
+        {
+            var biome = world.Grid.GetCell(new LogicalGridCoordinate(x, y)).Biome;
+            if (biome == previous)
+            {
+                run++;
+                if (run > longest)
+                    longest = run;
+                continue;
+            }
+
+            previous = biome;
+            run = 1;
+        }
+
+        return longest;
+    }
+
     private static IEnumerable<LogicalGridCoordinate> SampleCells()
     {
         yield return new LogicalGridCoordinate(0, 0);

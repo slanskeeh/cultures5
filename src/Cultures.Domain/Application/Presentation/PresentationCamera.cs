@@ -7,20 +7,75 @@ using Cultures.World;
 namespace Cultures.Application.Presentation;
 
 /// <summary>
-/// Presentation-only camera. Not the simulation debug cursor.
+/// Presentation-only camera in continuous isometric space. Not the simulation cursor and not a hex.
 /// </summary>
 public sealed class PresentationCamera
 {
-    public PresentationCamera(LogicalGridCoordinate focus, int zoom = 22)
+    public const float EdgeMarginPixels = 28f;
+    public const float EdgeSpeedPerSecond = 420f;
+
+    public PresentationCamera(float isoX, float isoY, int zoom = 22)
     {
-        Focus = focus;
+        IsoX = isoX;
+        IsoY = isoY;
         Zoom = Math.Clamp(zoom, 8, 48);
     }
 
-    public LogicalGridCoordinate Focus { get; set; }
+    public float IsoX { get; set; }
+    public float IsoY { get; set; }
     public int Zoom { get; set; }
 
-    public void Follow(LogicalGridCoordinate cell) => Focus = cell;
+    public static PresentationCamera LookingAt(LogicalGridCoordinate cell, RenderProjection projection, int zoom = 22)
+    {
+        ArgumentNullException.ThrowIfNull(projection);
+        var iso = projection.ToIso(cell);
+        return new PresentationCamera(iso.X, iso.Y, zoom);
+    }
+
+    public void LookAt(LogicalGridCoordinate cell, RenderProjection projection)
+    {
+        ArgumentNullException.ThrowIfNull(projection);
+        var iso = projection.ToIso(cell);
+        IsoX = iso.X;
+        IsoY = iso.Y;
+    }
+
+    public void Pan(float isoDeltaX, float isoDeltaY)
+    {
+        IsoX += isoDeltaX;
+        IsoY += isoDeltaY;
+    }
+
+    public void Confine(WorldConfiguration world, RenderProjection projection)
+    {
+        ArgumentNullException.ThrowIfNull(world);
+        ArgumentNullException.ThrowIfNull(projection);
+        var width = projection.HexWidth * world.Width;
+        var height = projection.HexDepth * projection.VerticalScale * Math.Max(0, world.Height - 1);
+        IsoY = Math.Clamp(IsoY, 0f, height);
+        IsoX = Repeat(IsoX, width);
+    }
+
+    public LogicalGridCoordinate ApproximateCell(RenderProjection projection, WorldTopology topology)
+    {
+        ArgumentNullException.ThrowIfNull(projection);
+        ArgumentNullException.ThrowIfNull(topology);
+        var raw = projection.ApproximateCell(IsoX, IsoY);
+        var resolution = topology.Resolve(raw.X, raw.Y);
+        if (resolution.TryGetCell(out var cell))
+            return cell;
+        return new LogicalGridCoordinate(
+            topology.WrapX(raw.X),
+            Math.Clamp(raw.Y, 0, topology.Configuration.Height - 1));
+    }
+
+    private static float Repeat(float value, float modulus)
+    {
+        if (modulus <= 0f)
+            return 0f;
+        var wrapped = value % modulus;
+        return wrapped < 0f ? wrapped + modulus : wrapped;
+    }
 }
 
 /// <summary>
@@ -28,14 +83,29 @@ public sealed class PresentationCamera
 /// </summary>
 public sealed class PresentationSettings
 {
+    public const double BaselineSecondsPerTick = 0.1;
+
+    public static readonly float[] PlaySpeedRates = [0.25f, 0.40f, 0.60f];
+
     public bool HighContrast { get; set; }
     public bool ShowHelp { get; set; } = true;
     public int HudFontSize { get; set; } = 11;
+    public int PlaySpeed { get; private set; } = 1;
+
+    public float PlaySpeedRate => PlaySpeedRates[PlaySpeed - 1];
+
+    public double SecondsPerTick => BaselineSecondsPerTick / PlaySpeedRate;
 
     public void CycleHudFont()
     {
         HudFontSize = HudFontSize >= 16 ? 11 : HudFontSize + 2;
     }
+
+    public void SetPlaySpeed(int speed) => PlaySpeed = Math.Clamp(speed, 1, PlaySpeedRates.Length);
+
+    public void Faster() => SetPlaySpeed(PlaySpeed + 1);
+
+    public void Slower() => SetPlaySpeed(PlaySpeed - 1);
 }
 
 /// <summary>

@@ -26,4 +26,11 @@ public static class CharacterRules
     public const int IdleDurationTicks = 8;
     public const float StarvationDamagePerDay = 0.20f;
     public const int PathSearchLimit = 256;
+    public const int GatherDurationTicks = 16;
+    public const int HuntDurationTicks = 18;
+    public const int ConstructDurationTicks = 12;
+    public const int HaulDurationTicks = 8;
+    public const int ScoutDurationTicks = 20;
+    public const int LaborSearchRadius = 16;
+    public const int HaulWhenCarrying = 3;
 }

@@ -7,16 +7,22 @@ namespace Cultures.Population;
 
 public sealed class CharacterActionSystem
 {
-    public CharacterActionSystem(GridNavigator navigator, ProductionSystem production, TeachingSystem teaching)
+    public CharacterActionSystem(
+        GridNavigator navigator,
+        ProductionSystem production,
+        TeachingSystem teaching,
+        LaborSystem? labor = null)
     {
         Navigator = navigator ?? throw new ArgumentNullException(nameof(navigator));
         Production = production ?? throw new ArgumentNullException(nameof(production));
         Teaching = teaching ?? throw new ArgumentNullException(nameof(teaching));
+        Labor = labor;
     }
 
     public GridNavigator Navigator { get; }
     public ProductionSystem Production { get; }
     public TeachingSystem Teaching { get; }
+    public LaborSystem? Labor { get; set; }
 
     public void Advance(CharacterState character)
     {
@@ -90,10 +96,13 @@ public sealed class CharacterActionSystem
         switch (character.Activity.Kind)
         {
             case ActionKind.Eat:
-                if (character.Inventory.TryRemove(ResourceType.Food, 1))
+                foreach (var type in ResourceRules.Edible)
                 {
+                    if (!character.Inventory.TryRemove(type, 1))
+                        continue;
                     character.Needs.Hunger -= CharacterRules.EatHungerRestore;
                     character.Needs.Clamp();
+                    break;
                 }
                 break;
             case ActionKind.Work:
@@ -101,6 +110,13 @@ public sealed class CharacterActionSystem
                 break;
             case ActionKind.Teach:
                 Teaching.Complete(character);
+                break;
+            case ActionKind.Gather:
+            case ActionKind.Hunt:
+            case ActionKind.Construct:
+            case ActionKind.Haul:
+            case ActionKind.Scout:
+                Labor?.Complete(character);
                 break;
         }
 
@@ -121,8 +137,23 @@ public sealed class CharacterActionSystem
         var building = Production.BuildingAtAccess(character.Position);
         if (building is null || !building.Definition.IsStorage)
             return;
-        if (character.Inventory.Has(ResourceType.Food, 1))
+        if (HasEdible(character.Inventory))
             return;
-        building.Inventory.TryTransferTo(character.Inventory, ResourceType.Food, 1);
+        foreach (var type in ResourceRules.Edible)
+        {
+            if (building.Inventory.TryTransferTo(character.Inventory, type, 1))
+                return;
+        }
+    }
+
+    private static bool HasEdible(Inventory inventory)
+    {
+        foreach (var type in ResourceRules.Edible)
+        {
+            if (inventory.Has(type, 1))
+                return true;
+        }
+
+        return false;
     }
 }

@@ -389,7 +389,7 @@ internal static class SettlementTestSupport
         return dx <= 1 && dy <= 1;
     }
 
-    private static IEnumerable<LogicalGridCoordinate> Spiral(
+    internal static IEnumerable<LogicalGridCoordinate> Spiral(
         LogicalWorld world,
         LogicalGridCoordinate origin,
         int minRadius = 0,

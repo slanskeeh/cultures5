@@ -74,6 +74,7 @@ public sealed class BuildingState
     public BuildingLifecycle Lifecycle { get; set; }
     public SettlementId AssociatedSettlement { get; set; }
     public BuildingProductionState Production { get; } = new();
+    public int ConstructionProgress { get; set; }
 
     public BuildingTypeId TypeId => Definition.TypeId;
     public bool IsActive => Lifecycle == BuildingLifecycle.Active;

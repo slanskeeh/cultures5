@@ -124,6 +124,10 @@ public sealed class WorldGenerator
         return BiomeId.TemperateLand;
     }
 
+    /// <summary>
+    /// Frequency is waves around the world (X) / across latitude (Y), not per cell.
+    /// Larger Width/Height therefore produce larger continents and biomes in hexes.
+    /// </summary>
     private float SampleWrapped(int cellX, int cellY, float frequencyX, float frequencyY, ulong salt)
     {
         var width = Configuration.Width;

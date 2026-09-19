@@ -68,6 +68,8 @@ public sealed class SimulationHost
         Population = seedContent
             ? PopulationSpawner.Spawn(World, Ids, worldSeed, populationCount)
             : new PopulationRoster();
+        if (seedContent)
+            ProfessionBootstrap.AssignStarting(Population, Professions);
         Households = new HouseholdDirectory();
         Teaching = new TeachingSystem(Population, World, Events, Clock);
         Creation = new CharacterCreation(Population, Ids, World, Events, Clock);
@@ -83,11 +85,13 @@ public sealed class SimulationHost
             Aggregate,
             Production,
             Teaching);
+        Exploration = new ExplorationSystem(World, Clock, Events);
+        Labor = new LaborSystem(World, Population, Production, Ecology, Exploration, Professions);
         Characters = new CharacterSimulation(World, Population, Clock, Events, Production, Teaching, Lod);
         Characters.AttachSocial(Social);
+        Characters.AttachLabor(Labor);
         Settlements = new SettlementDirectory();
         SettlementDetection = new SettlementSystem(World, Population, Buildings, Settlements, Ids, Events, Clock, Recipes);
-        Exploration = new ExplorationSystem(World, Clock, Events);
         Civilization = new CivilizationSystem(worldSeed, Ids, Population, Events, Clock);
         Politics = new InternalPoliticsSystem(worldSeed, Ids, Population, Civilization.Factions, Events, Clock);
         Military = new MilitarySystem(worldSeed, Ids, Population, Civilization.Factions, Events, Clock);
@@ -135,6 +139,7 @@ public sealed class SimulationHost
     public AggregateSimulation Aggregate { get; }
     public LodSystem Lod { get; }
     public ExplorationSystem Exploration { get; }
+    public LaborSystem Labor { get; }
     public CivilizationSystem Civilization { get; }
     public DiplomacySystem Diplomacy => Civilization.Diplomacy;
     public InternalPoliticsSystem Politics { get; }
@@ -273,6 +278,10 @@ public sealed class SimulationHost
         Commands.Register(new DisbandMilitaryUnitHandler(Military));
         Commands.Register(new AssignProfessionHandler(Social));
         Commands.Register(new MatchProfessionHandler(Social));
+        Commands.Register(new DirectLaborHandler(Population));
+        Commands.Register(new StopLaborHandler(Population));
+        Commands.Register(new OrderMoveHandler(Population, Characters.Navigator, Production, Teaching));
+        Commands.Register(new SetDebugCursorHandler(Cursor));
         Commands.Register(new FormHouseholdHandler(Social));
         Commands.Register(new SetHouseholdHomeHandler(Social));
         Commands.Register(new FormPartnershipHandler(Social));

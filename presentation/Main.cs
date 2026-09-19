@@ -23,7 +23,7 @@ namespace Cultures.Presentation;
 /// </summary>
 public partial class Main : Control
 {
-    public const double SecondsPerTick = 0.1;
+    public const double SecondsPerTick = PresentationSettings.BaselineSecondsPerTick;
     public const int DebugFontSize = 11;
 
     private SimulationHost _host = null!;
@@ -32,22 +32,27 @@ public partial class Main : Control
     private WorldDebugMap _map = null!;
     private double _accumulator;
     private string _lastCommand = "ready";
-    private int _selectedIndex;
+    private int _selectedIndex = -1;
     private int _selectedBuildingIndex;
     private int _selectedSettlementIndex;
     private int _selectedFactionIndex;
     private int _selectedGroupIndex;
     private int _selectedUnitIndex;
+    private int _startingJobIndex;
     private PresentationCamera _camera = null!;
     private readonly PresentationSelection _selection = new();
     private readonly PresentationSettings _settings = new();
     private FileSaveStore _saves = null!;
+    private ColorRect _inspector = null!;
+    private Label _inspectorLabel = null!;
+    private WorldDebugMap _previewMap = null!;
+    private bool _panning;
 
     public override void _Ready()
     {
         _host = new SimulationHost(
             worldSeed: 1,
-            world: WorldConfiguration.DebugSample,
+            world: WorldConfiguration.Playtest,
             balance: new SimulationBalance { AutosaveIntervalTicks = 240, HuntFoodYield = 2 });
         _saves = new FileSaveStore(OS.GetUserDataDir());
         _hud = GetNode<ColorRect>("Hud");
@@ -56,10 +61,28 @@ public partial class Main : Control
         _label.VerticalAlignment = VerticalAlignment.Top;
         _map = GetNode<WorldDebugMap>("WorldDebugMap");
         _map.Host = _host;
-        _camera = new PresentationCamera(_host.Cursor.Position, WorldDebugMap.CellSize);
-        SnapToSelected();
-        ProtectSelected();
+        _map.Picked += OnMapPicked;
+        _camera = PresentationCamera.LookingAt(_host.Cursor.Position, RenderProjection.Playtest, WorldDebugMap.CellSize);
+        BuildInspector();
         Refresh();
+    }
+
+    public override void _Input(InputEvent @event)
+    {
+        if (@event is InputEventMouseButton mouse && mouse.ButtonIndex == MouseButton.Middle)
+        {
+            _panning = mouse.Pressed;
+            if (mouse.Pressed)
+                GetViewport().SetInputAsHandled();
+            return;
+        }
+
+        if (!_panning || @event is not InputEventMouseMotion motion)
+            return;
+
+        _camera.Pan(-motion.Relative.X, -motion.Relative.Y);
+        ConfineCamera();
+        GetViewport().SetInputAsHandled();
     }
 
     public override void _UnhandledInput(InputEvent @event)
@@ -199,12 +222,12 @@ public partial class Main : Control
                 DebugFormPact();
                 break;
             case Key.Minus:
-                _host.Clock.SetSpeed(Math.Max(1, _host.Clock.Speed / 2));
-                _lastCommand = $"speed {_host.Clock.Speed}x";
+                _settings.Slower();
+                _lastCommand = $"speed {_settings.PlaySpeed} ({_settings.PlaySpeedRate:P0})";
                 break;
             case Key.Equal:
-                _host.Clock.CycleSpeed();
-                _lastCommand = $"speed {_host.Clock.Speed}x";
+                _settings.Faster();
+                _lastCommand = $"speed {_settings.PlaySpeed} ({_settings.PlaySpeedRate:P0})";
                 break;
             case Key.F1:
                 _settings.ShowHelp = !_settings.ShowHelp;
@@ -212,8 +235,23 @@ public partial class Main : Control
                     _host.OnboardingComplete = true;
                 _lastCommand = _settings.ShowHelp ? "help on" : "help off";
                 break;
+            case Key.F2:
+                CycleStartingJob();
+                break;
+            case Key.F3:
+                AssignStartingJob();
+                break;
+            case Key.F4:
+                DirectSelectedLabor();
+                break;
             case Key.F5:
                 DebugSave();
+                break;
+            case Key.F6:
+                StopSelectedLabor();
+                break;
+            case Key.F7:
+                PlaceConstructingShelter();
                 break;
             case Key.F9:
                 DebugLoad();
@@ -246,18 +284,52 @@ public partial class Main : Control
 
     public override void _Process(double delta)
     {
+        ApplyEdgePan(delta);
         if (!_host.Clock.IsPaused)
         {
             _accumulator += delta;
-            while (_accumulator >= SecondsPerTick)
+            var stepSeconds = _settings.SecondsPerTick;
+            while (_accumulator >= stepSeconds)
             {
-                _accumulator -= SecondsPerTick;
-                _host.Step((ulong)_host.Clock.Speed);
+                _accumulator -= stepSeconds;
+                _host.Step(1);
             }
         }
 
         Refresh();
     }
+
+    private void ApplyEdgePan(double delta)
+    {
+        if (_panning)
+            return;
+
+        var mouse = GetViewport().GetMousePosition();
+        var rect = GetViewport().GetVisibleRect();
+        if (!rect.HasPoint(mouse))
+            return;
+
+        var dx = 0f;
+        var dy = 0f;
+        var edge = PresentationCamera.EdgeMarginPixels;
+        if (mouse.X <= rect.Position.X + edge)
+            dx -= 1f;
+        if (mouse.X >= rect.End.X - edge)
+            dx += 1f;
+        if (mouse.Y <= rect.Position.Y + edge)
+            dy -= 1f;
+        if (mouse.Y >= rect.End.Y - edge)
+            dy += 1f;
+        if (dx == 0f && dy == 0f)
+            return;
+
+        var speed = PresentationCamera.EdgeSpeedPerSecond * (float)delta;
+        _camera.Pan(dx * speed, dy * speed);
+        ConfineCamera();
+    }
+
+    private void ConfineCamera() =>
+        _camera.Confine(_host.World.Configuration, RenderProjection.Playtest);
 
     private void Move(int dx, int dy)
     {
@@ -288,13 +360,28 @@ public partial class Main : Control
     {
         if (_host.Population.Count == 0)
             return;
-        var previous = _host.Population[_selectedIndex];
-        _selectedIndex = (_selectedIndex + 1) % _host.Population.Count;
-        if (previous.IsPersistentIndividual)
+        var previous = TrySelected();
+        _selectedIndex = _selectedIndex < 0
+            ? 0
+            : (_selectedIndex + 1) % _host.Population.Count;
+        if (previous is { IsPersistentIndividual: true })
             _host.Commands.Execute(new ProtectCharacterCommand(previous.Id, false));
         ProtectSelected();
-        _selection.Character = _host.Population[_selectedIndex].Id;
-        _lastCommand = $"selected {_host.Population[_selectedIndex].Id}";
+        var person = PersonOrFirst();
+        _selection.Character = person.Id;
+        _lastCommand = $"selected {person.Id}";
+    }
+
+    private void SnapToSelected()
+    {
+        if (TrySelected() is not { } character)
+            return;
+        var dx = _host.World.Topology.SignedHorizontalDelta(_host.Cursor.Position.X, character.Position.X);
+        var dy = character.Position.Y - _host.Cursor.Position.Y;
+        var result = _host.Commands.Execute(new MoveDebugCursorCommand(dx, dy));
+        _camera.LookAt(character.Position, RenderProjection.Playtest);
+        ConfineCamera();
+        _lastCommand = result.Success ? $"camera to {character.Id}" : result.Error ?? "snap failed";
     }
 
     private void CycleBuilding()
@@ -306,22 +393,11 @@ public partial class Main : Control
         _lastCommand = $"selected {_host.Buildings[_selectedBuildingIndex].Id}";
     }
 
-    private void SnapToSelected()
-    {
-        if (_host.Population.Count == 0)
-            return;
-        var character = _host.Population[_selectedIndex];
-        var dx = _host.World.Topology.SignedHorizontalDelta(_host.Cursor.Position.X, character.Position.X);
-        var dy = character.Position.Y - _host.Cursor.Position.Y;
-        var result = _host.Commands.Execute(new MoveDebugCursorCommand(dx, dy));
-        _lastCommand = result.Success ? $"cursor to {character.Id}" : result.Error ?? "snap failed";
-    }
-
     private void DebugCreateChild()
     {
         if (_host.Population.Count < 1)
             return;
-        var parentA = _host.Population[_selectedIndex];
+        var parentA = PersonOrFirst();
         var parentB = _host.Population[(_selectedIndex + 1) % _host.Population.Count];
         var result = _host.Commands.Execute(new CreateChildCommand(parentA.Id, parentB.Id));
         _lastCommand = result.Success ? $"child of {parentA.Id}+{parentB.Id}" : result.Error ?? "birth failed";
@@ -331,7 +407,7 @@ public partial class Main : Control
     {
         if (_host.Population.Count < 1)
             return;
-        var teacher = _host.Population[_selectedIndex];
+        var teacher = PersonOrFirst();
         var studentId = teacher.FamilyLinks.Children.FirstOrDefault();
         if (!studentId.IsAssigned)
             studentId = _host.Population[(_selectedIndex + 1) % _host.Population.Count].Id;
@@ -343,7 +419,7 @@ public partial class Main : Control
     {
         if (_host.Population.Count < 1)
             return;
-        var character = _host.Population[_selectedIndex];
+        var character = PersonOrFirst();
         var result = _host.Commands.Execute(new AddSkillExperienceCommand(character.Id, SkillType.Farming, SkillRules.XpPerLevel));
         _lastCommand = result.Success
             ? $"farming xp {character.Id} now {character.Skills.GetLevel(SkillType.Farming)}"
@@ -367,15 +443,247 @@ public partial class Main : Control
         var dx = _host.World.Topology.SignedHorizontalDelta(_host.Cursor.Position.X, settlement.Core.X);
         var dy = settlement.Core.Y - _host.Cursor.Position.Y;
         var result = _host.Commands.Execute(new MoveDebugCursorCommand(dx, dy));
-        _lastCommand = result.Success ? $"cursor to {settlement.Id} core" : result.Error ?? "snap failed";
+        _camera.LookAt(settlement.Core, RenderProjection.Playtest);
+        ConfineCamera();
+        _lastCommand = result.Success ? $"camera to {settlement.Id} core" : result.Error ?? "snap failed";
     }
 
     private void ProtectSelected()
     {
-        if (_host.Population.Count == 0)
+        if (TrySelected() is not { } character)
             return;
-        var character = _host.Population[_selectedIndex];
         _host.Commands.Execute(new ProtectCharacterCommand(character.Id, true));
+    }
+
+    private CharacterState? TrySelected()
+    {
+        if (_selectedIndex < 0 || _selectedIndex >= _host.Population.Count)
+            return null;
+        return _host.Population[_selectedIndex];
+    }
+
+    private CharacterState PersonOrFirst() => TrySelected() ?? _host.Population[0];
+
+    private bool SelectPerson(CharacterId id)
+    {
+        for (var i = 0; i < _host.Population.Count; i++)
+        {
+            if (_host.Population[i].Id != id)
+                continue;
+            _selectedIndex = i;
+            _selection.Character = id;
+            ProtectSelected();
+            return true;
+        }
+
+        return false;
+    }
+
+    private void OnMapPicked(Vector2 local)
+    {
+        if (!_map.TryPick(local, out var cell, out var person))
+        {
+            _lastCommand = "click missed the map";
+            Refresh();
+            return;
+        }
+
+        if (person is { } id)
+        {
+            SelectPerson(id);
+            _lastCommand = $"select {id}";
+            Refresh();
+            return;
+        }
+
+        if (TrySelected() is { } selected)
+        {
+            var result = _host.Commands.Execute(new OrderMoveCommand(selected.Id, cell));
+            _lastCommand = result.Success ? $"{selected.Id} → {cell}" : result.Error ?? "move failed";
+            Refresh();
+            return;
+        }
+
+        _host.Commands.Execute(new SetDebugCursorCommand(cell));
+        _lastCommand = $"cursor {cell}";
+        Refresh();
+    }
+
+    private void BuildInspector()
+    {
+        _inspector = new ColorRect
+        {
+            Name = "Inspector",
+            Color = new Color(0.07f, 0.08f, 0.055f, 0.94f),
+            MouseFilter = MouseFilterEnum.Stop,
+            Visible = false
+        };
+        _inspector.SetAnchorsPreset(LayoutPreset.BottomRight);
+        _inspector.OffsetLeft = -300;
+        _inspector.OffsetTop = -372;
+        _inspector.OffsetRight = -12;
+        _inspector.OffsetBottom = -12;
+        AddChild(_inspector);
+
+        var previewFrame = new ColorRect
+        {
+            Color = new Color(0.04f, 0.05f, 0.035f, 1f),
+            MouseFilter = MouseFilterEnum.Ignore,
+            ClipContents = true
+        };
+        previewFrame.SetAnchorsPreset(LayoutPreset.TopWide);
+        previewFrame.OffsetLeft = 8;
+        previewFrame.OffsetTop = 8;
+        previewFrame.OffsetRight = -8;
+        previewFrame.OffsetBottom = 176;
+        _inspector.AddChild(previewFrame);
+
+        _previewMap = new WorldDebugMap
+        {
+            Host = _host,
+            Interactive = false,
+            ViewRadiusX = 6,
+            ViewRadiusY = 4,
+            MouseFilter = MouseFilterEnum.Ignore
+        };
+        _previewMap.SetAnchorsPreset(LayoutPreset.FullRect);
+        previewFrame.AddChild(_previewMap);
+
+        _inspectorLabel = new Label
+        {
+            AutowrapMode = TextServer.AutowrapMode.WordSmart,
+            MouseFilter = MouseFilterEnum.Ignore
+        };
+        _inspectorLabel.AddThemeFontSizeOverride("font_size", DebugFontSize);
+        _inspectorLabel.AddThemeColorOverride("font_color", new Color(0.82f, 0.74f, 0.52f));
+        _inspectorLabel.SetAnchorsPreset(LayoutPreset.BottomWide);
+        _inspectorLabel.OffsetLeft = 10;
+        _inspectorLabel.OffsetTop = -188;
+        _inspectorLabel.OffsetRight = -10;
+        _inspectorLabel.OffsetBottom = -8;
+        _inspector.AddChild(_inspectorLabel);
+    }
+
+    private void RefreshInspector(CharacterState? selected)
+    {
+        _inspector.Visible = selected is not null;
+        if (selected is null)
+        {
+            _previewMap.FocusOverride = null;
+            _previewMap.SelectedId = null;
+            return;
+        }
+
+        _previewMap.Host = _host;
+        _previewMap.FocusOverride = selected.Position;
+        _previewMap.SelectedId = selected.Id;
+        _previewMap.HighContrast = _settings.HighContrast;
+        _inspectorLabel.Text =
+            $"{selected.Name}  {selected.Id}\n" +
+            $"{selected.LifeStage}  age {selected.AgeYears:0.0}\n" +
+            $"job {selected.Profession}  {selected.Activity.Kind}\n" +
+            $"hunger {selected.Needs.Hunger:0.00}  fatigue {selected.Needs.Fatigue:0.00}\n" +
+            $"carry {FormatCargo(selected.Inventory)}\n" +
+            $"click ground to walk   F4 work   F6 stop";
+        _previewMap.QueueRedraw();
+    }
+
+    private ProfessionDefinition CurrentStartingJob()
+    {
+        var jobs = _host.Professions.Starting;
+        return jobs[_startingJobIndex % jobs.Count];
+    }
+
+    private void CycleStartingJob()
+    {
+        if (_host.Professions.Starting.Count == 0)
+            return;
+        _startingJobIndex = (_startingJobIndex + 1) % _host.Professions.Starting.Count;
+        _lastCommand = $"job {CurrentStartingJob().Id}";
+    }
+
+    private void AssignStartingJob()
+    {
+        if (TrySelected() is not { } person)
+        {
+            _lastCommand = "select a person first";
+            return;
+        }
+        var job = CurrentStartingJob();
+        var result = _host.Commands.Execute(new AssignProfessionCommand(person.Id, job.Id.Value));
+        _lastCommand = result.Success ? $"{person.Id} → {job.Id}" : result.Error ?? "assign failed";
+        ProtectSelected();
+    }
+
+    private void DirectSelectedLabor()
+    {
+        if (TrySelected() is not { } person)
+        {
+            _lastCommand = "select a person first";
+            return;
+        }
+        var result = _host.Commands.Execute(new DirectLaborCommand(person.Id));
+        _lastCommand = result.Success ? $"{person.Id} works now" : result.Error ?? "order failed";
+    }
+
+    private void StopSelectedLabor()
+    {
+        if (TrySelected() is not { } person)
+        {
+            _lastCommand = "select a person first";
+            return;
+        }
+        var result = _host.Commands.Execute(new StopLaborCommand(person.Id));
+        _lastCommand = result.Success ? $"{person.Id} stopped" : result.Error ?? "stop failed";
+    }
+
+    private void PlaceConstructingShelter()
+    {
+        var origin = _host.Cursor.Position;
+        var result = _host.Commands.Execute(
+            new PlaceBuildingCommand(BuildingTypeId.Shelter, origin, CompleteImmediately: false));
+        if (result.Success)
+        {
+            _lastCommand = $"hut constructing at {origin}";
+            return;
+        }
+
+        foreach (var cell in SettlementSpiral(origin))
+        {
+            result = _host.Commands.Execute(
+                new PlaceBuildingCommand(BuildingTypeId.Shelter, cell, CompleteImmediately: false));
+            if (!result.Success)
+                continue;
+            _lastCommand = $"hut constructing at {cell}";
+            _host.Commands.Execute(new SetDebugCursorCommand(cell));
+            return;
+        }
+
+        _lastCommand = result.Error ?? "no room for a hut";
+    }
+
+    private IEnumerable<LogicalGridCoordinate> SettlementSpiral(LogicalGridCoordinate origin)
+    {
+        for (var radius = 1; radius <= 12; radius++)
+        {
+            for (var dy = -radius; dy <= radius; dy++)
+            {
+                for (var dx = -radius; dx <= radius; dx++)
+                {
+                    if (Math.Abs(dx) != radius && Math.Abs(dy) != radius)
+                        continue;
+                    var resolution = _host.World.Topology.Resolve(origin.X + dx, origin.Y + dy);
+                    if (resolution.TryGetCell(out var cell))
+                        yield return cell;
+                }
+            }
+        }
+    }
+
+    private static string FormatCargo(Inventory inventory)
+    {
+        var parts = inventory.Enumerate().Select(stack => $"{stack.Type} x{stack.Quantity}").ToArray();
+        return parts.Length == 0 ? "empty" : string.Join(" ", parts);
     }
 
     private void DebugRefreshLod()
@@ -428,7 +736,7 @@ public partial class Main : Control
     {
         if (_host.Population.Count == 0 || _host.Civilization.Factions.Count == 0)
             return;
-        var person = _host.Population[_selectedIndex];
+        var person = PersonOrFirst();
         var faction = _host.Civilization.Factions[_selectedFactionIndex % _host.Civilization.Factions.Count];
         var target = person.Faction == faction.Id ? FactionId.None : faction.Id;
         var result = _host.Commands.Execute(new AssignFactionMembershipCommand(person.Id, target));
@@ -481,7 +789,7 @@ public partial class Main : Control
         var groups = GroupsOfSelectedFaction();
         if (groups.Count == 0)
             return;
-        var person = _host.Population[_selectedIndex];
+        var person = PersonOrFirst();
         var group = groups[_selectedGroupIndex % groups.Count];
         var target = person.PoliticalGroup == group.Id ? PoliticalGroupId.None : group.Id;
         var result = _host.Commands.Execute(new AssignPoliticalGroupCommand(person.Id, target));
@@ -546,7 +854,7 @@ public partial class Main : Control
         var units = UnitsOfSelectedFaction();
         if (units.Count == 0)
             return;
-        var person = _host.Population[_selectedIndex];
+        var person = PersonOrFirst();
         var unit = units[_selectedUnitIndex % units.Count];
         var target = person.MilitaryUnit == unit.Id ? MilitaryUnitId.None : unit.Id;
         var result = _host.Commands.Execute(new AssignCharacterToMilitaryUnitCommand(person.Id, target));
@@ -571,7 +879,7 @@ public partial class Main : Control
     {
         if (_host.Population.Count == 0)
             return;
-        var person = _host.Population[_selectedIndex];
+        var person = PersonOrFirst();
         var result = _host.Commands.Execute(new MatchProfessionCommand(person.Id));
         _lastCommand = result.Success
             ? $"{person.Id} profession {person.Profession}"
@@ -582,7 +890,7 @@ public partial class Main : Control
     {
         if (_host.Population.Count < 2)
             return;
-        var a = _host.Population[_selectedIndex];
+        var a = PersonOrFirst();
         var b = _host.Population[(_selectedIndex + 1) % _host.Population.Count];
         var result = _host.Commands.Execute(new FormPartnershipCommand(a.Id, b.Id));
         if (!result.Success)
@@ -596,7 +904,7 @@ public partial class Main : Control
     {
         if (_host.Population.Count == 0)
             return;
-        var person = _host.Population[_selectedIndex];
+        var person = PersonOrFirst();
         if (!person.Household.IsAssigned)
         {
             _lastCommand = "no household";
@@ -618,7 +926,7 @@ public partial class Main : Control
     {
         if (_host.Population.Count == 0)
             return;
-        var person = _host.Population[_selectedIndex];
+        var person = PersonOrFirst();
         var result = _host.Commands.Execute(new HuntWildlifeCommand(person.Id));
         _lastCommand = result.Success
             ? $"{person.Id} hunted food {person.Inventory.GetQuantity(ResourceType.Food)}"
@@ -647,8 +955,9 @@ public partial class Main : Control
         {
             _host = SimulationHost.LoadSave(_saves, SaveSlots.Default);
             _map.Host = _host;
-            _selectedIndex = 0;
-            _camera = new PresentationCamera(_host.Cursor.Position, _camera.Zoom);
+            _previewMap.Host = _host;
+            _selectedIndex = -1;
+            _camera = PresentationCamera.LookingAt(_host.Cursor.Position, RenderProjection.Playtest, _camera.Zoom);
             _lastCommand = $"loaded tick {_host.Clock.Tick}";
         }
         catch (Exception ex)
@@ -673,7 +982,9 @@ public partial class Main : Control
         var dx = _host.World.Topology.SignedHorizontalDelta(_host.Cursor.Position.X, building.Origin.X);
         var dy = building.Origin.Y - _host.Cursor.Position.Y;
         var result = _host.Commands.Execute(new MoveDebugCursorCommand(dx, dy));
-        _lastCommand = result.Success ? $"cursor to {building.Id}" : result.Error ?? "snap failed";
+        _camera.LookAt(building.Origin, RenderProjection.Playtest);
+        ConfineCamera();
+        _lastCommand = result.Success ? $"camera to {building.Id}" : result.Error ?? "snap failed";
     }
 
     private void Refresh()
@@ -684,7 +995,7 @@ public partial class Main : Control
         _host.World.Grid.TryGetCell(cursor.ToWorld(), out var terrain);
         var paused = _host.Clock.IsPaused ? "PAUSED" : "RUNNING";
         var water = terrain.IsWater ? "water" : "land";
-        var selected = _host.Population.Count > 0 ? _host.Population[_selectedIndex] : null;
+        var selected = TrySelected();
         var selectedBuilding = _host.Buildings.Count > 0 ? _host.Buildings[_selectedBuildingIndex] : null;
         var selectedSettlement = _host.Settlements.Count > 0
             ? _host.Settlements[_selectedSettlementIndex % _host.Settlements.Count]
@@ -694,15 +1005,17 @@ public partial class Main : Control
         _map.SelectedId = selected?.Id;
         _map.SelectedBuildingId = inspectBuilding?.Id;
         _map.SelectedSettlementId = selectedSettlement?.Id;
+        RefreshInspector(selected);
 
         var workplace = selected is { AssignedWorkplace.IsAssigned: true }
             ? selected.AssignedWorkplace.ToString()
             : "none";
+        var cargo = selected is null ? "empty" : FormatCargo(selected.Inventory);
         var characterLine = selected is null
             ? "no population"
             : $"{selected.Id} {selected.LifeStage} age {selected.AgeYears:0.0}  {selected.Position}  " +
               $"hunger {selected.Needs.Hunger:0.00}  fatigue {selected.Needs.Fatigue:0.00}  " +
-              $"food {selected.Inventory.GetQuantity(ResourceType.Food)}  {selected.Activity.Kind}  " +
+              $"carry {cargo}  {selected.Activity.Kind}  " +
               $"work {workplace}  {selected.Settlement}  {selected.Culture}  {selected.Faction}  {selected.PoliticalGroup}  {selected.MilitaryUnit}  job {selected.Profession}  home {selected.Household}  lod {selected.LodTier}";
         var familyLine = selected is null
             ? ""
@@ -722,8 +1035,10 @@ public partial class Main : Control
         var buildingLine = inspectBuilding is null
             ? "no building"
             : $"{inspectBuilding.Id} {inspectBuilding.TypeId} {inspectBuilding.Lifecycle} {inspectBuilding.Origin}  " +
+              $"build {inspectBuilding.ConstructionProgress}/{inspectBuilding.Definition.ConstructionTicks}  " +
               $"food {inspectBuilding.Inventory.GetQuantity(ResourceType.Food)}  " +
               $"wood {inspectBuilding.Inventory.GetQuantity(ResourceType.Wood)}  " +
+              $"stone {inspectBuilding.Inventory.GetQuantity(ResourceType.Stone)}  " +
               $"recipe {inspectBuilding.Production.CurrentRecipe?.Value ?? inspectBuilding.Definition.Recipe?.Value ?? "-"}  " +
               $"prod {inspectBuilding.Production.ProgressTicks}/{inspectBuilding.Production.DurationTicks}  " +
               $"workers {string.Join(",", inspectBuilding.Workplaces.Select(w => w.Worker.IsAssigned ? w.Worker.Value.ToString() : "-"))}  " +
@@ -795,19 +1110,27 @@ public partial class Main : Control
         var historyLine = HistoryChronicle.RenderRecent(_host.History, 5);
         var pacts = _host.Diplomacy.Pacts.Count;
         var help = _settings.ShowHelp ? $"{PlayGuide.Intro}\n{PlayGuide.Controls}\n" : "";
+        var jobPreview = _host.Professions.Starting.Count == 0
+            ? "-"
+            : CurrentStartingJob().Id.Value;
+        var playableLine =
+            $"KINLANDS  {paused}  speed {_settings.PlaySpeed} ({_settings.PlaySpeedRate:P0})  people {_host.Population.Alive.Count()}/{_host.Population.Count}  tick {date.Tick}\n" +
+            $"selected {(selected is null ? "none" : $"{selected.Id}  job {selected.Profession}  {selected.Activity.Kind}  hunger {selected.Needs.Hunger:0.00}  carry {cargo}")}\n" +
+            $"site {(inspectBuilding is null ? "none" : $"{inspectBuilding.TypeId} {inspectBuilding.Lifecycle} {inspectBuilding.ConstructionProgress}/{inspectBuilding.Definition.ConstructionTicks} wood {inspectBuilding.Inventory.GetQuantity(ResourceType.Wood)}")}\n" +
+            $"ready {jobPreview}   click select   F2 job   F3 assign   F4 work   F6 stop   F7 hut   Space pause   F1 help";
         var fertility = terrain.Fertility;
         var wildlife = _host.World.Chunks.TryResolve(cursor.ToWorld(), out var address)
             && _host.Ecology.Wildlife.TryGet(address.Chunk, out var pop)
             ? $"deer {pop.Deer} sheep {pop.Sheep} boar {pop.Boar} birds {pop.Birds}"
             : "wildlife -";
-        _camera.Follow(_host.Cursor.Position);
+        _map.CameraIsoX = _camera.IsoX;
+        _map.CameraIsoY = _camera.IsoY;
 
         _label.Text =
             help +
-            $"CULTURES — PHASE 19 RC  (17 alpha / 18 beta)\n" +
-            $"[sim] {paused}  {_host.Clock.Speed}x  seed {_host.WorldSeed}  people {_host.Population.Alive.Count()}/{_host.Population.Count}  " +
-            $"buildings {_host.Buildings.Count}  settlements {_host.Settlements.Count}  tick {date.Tick}  {_host.Diagnostics.Render()}\n" +
-            $"[world] cursor {cursor}  cam {_camera.Focus} z{_camera.Zoom}  {chunk}  {terrain.Biome} {water} " +
+            $"{playableLine}\n" +
+            $"[sim] seed {_host.WorldSeed}  buildings {_host.Buildings.Count}  settlements {_host.Settlements.Count}  {_host.Diagnostics.Render()}\n" +
+            $"[world] cursor {cursor}  cam {_camera.IsoX:0.0},{_camera.IsoY:0.0} z{_camera.Zoom}  {chunk}  {terrain.Biome} {water} " +
             $"elev {terrain.Elevation:0.00} fert {fertility:0.00} river {terrain.HasRiver}  {wildlife}\n" +
             $"[entity] {characterLine}\n" +
             $"{familyLine}\n" +
@@ -824,10 +1147,10 @@ public partial class Main : Control
             $"{unitLine}\n" +
             $"[history] {historyLine}\n" +
             $"last: {_lastCommand}\n" +
-            "Arrows cursor   Tab person   C follow   B/V building   M/U settlement   E detect   L lod   O refresh   9 agg  0 full\n" +
+            "Arrows debug cursor   MMB pan   edge scroll   Tab person   C look   B/V building   M/U settlement   E detect   L lod   O refresh   9 agg  0 full\n" +
             "P faction   J join   H diplomacy   I group   Y affiliate   W stability   1/2 influence   X unit   Z enlist   3 disband\n" +
-            "4 profession   5 household   6 home   7 hunt   8 pact   -/= speed   F1 help   F5 save   F9 load   F11 contrast   F12 HUD\n" +
-            ",/. camera zoom   Q overlay   R rumor   S scout   D map   F confirm   A analyze   Space";
+            "4 match trained job   5 household   6 home   7 hunt   8 pact   -/= speed 1-3   F5 save   F9 load   F11 contrast   F12 HUD\n" +
+            ",/. camera zoom   Q overlay   R rumor   S scout   D map   F confirm   A analyze";
 
         FitDebugHud();
         _map.QueueRedraw();

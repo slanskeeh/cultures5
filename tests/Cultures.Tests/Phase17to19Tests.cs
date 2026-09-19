@@ -168,9 +168,22 @@ public sealed class ReleaseCandidateTests
         var host = new SimulationHost(2, populationCount: 1, placeDevelopmentBuildings: false);
         Assert.False(string.IsNullOrWhiteSpace(HistoryChronicle.RenderRecent(host.History, 3)));
         Assert.Contains("-/=", PlayGuide.Controls, StringComparison.Ordinal);
+        Assert.Contains("MMB pan", PlayGuide.Controls, StringComparison.Ordinal);
+        Assert.Contains("edge scroll", PlayGuide.Controls, StringComparison.Ordinal);
         var settings = new PresentationSettings();
         settings.CycleHudFont();
         Assert.Equal(13, settings.HudFontSize);
+        Assert.Equal(0.25f, settings.PlaySpeedRate);
+        Assert.Equal(0.4, settings.SecondsPerTick, 5);
+        settings.Faster();
+        Assert.Equal(2, settings.PlaySpeed);
+        Assert.Equal(0.40f, settings.PlaySpeedRate);
+        settings.SetPlaySpeed(3);
+        Assert.Equal(0.60f, settings.PlaySpeedRate);
+        settings.Faster();
+        Assert.Equal(3, settings.PlaySpeed);
+        settings.Slower();
+        Assert.Equal(2, settings.PlaySpeed);
     }
 
     [Fact]

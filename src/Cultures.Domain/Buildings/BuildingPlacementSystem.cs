@@ -38,7 +38,12 @@ public sealed class BuildingPlacementSystem
     public PlacementResult TryPlace(BuildingTypeId typeId, LogicalGridCoordinate origin, bool completeImmediately = true)
     {
         var definition = Catalog.Get(typeId);
-        if (!definition.Footprint.TryMaterialize(World.Topology, origin, out var cells))
+        if (definition.Footprint.TryMaterialize(World.Topology, origin, out var cells))
+        {
+            if (cells.Count != cells.Distinct().Count())
+                return PlacementResult.Fail("Footprint collapsed onto duplicate cells.");
+        }
+        else
             return PlacementResult.Fail("Footprint is outside the world.");
 
         foreach (var cell in cells)

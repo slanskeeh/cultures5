@@ -10,15 +10,29 @@ public sealed class WorldConfiguration : IEquatable<WorldConfiguration>
     public const int DebugHeight = 50;
     public const int DebugChunkWidth = 10;
     public const int DebugChunkHeight = 10;
+    public const int PlaytestWidth = 512;
+    public const int PlaytestHeight = 256;
+    public const int PlaytestChunkWidth = 16;
+    public const int PlaytestChunkHeight = 16;
 
     /// <summary>
-    /// Small deterministic sample used by tests and the Phase 1 debug shell. Not the final game size.
+    /// Small deterministic sample used by tests. Not the playable world.
     /// </summary>
     public static WorldConfiguration DebugSample { get; } = Create(
         DebugWidth,
         DebugHeight,
         DebugChunkWidth,
         DebugChunkHeight);
+
+    /// <summary>
+    /// Current playable world. Noise is cycles-per-world, so biomes scale with these dimensions (AD-127).
+    /// Tests keep <see cref="DebugSample"/>. Final production size remains OD-001.
+    /// </summary>
+    public static WorldConfiguration Playtest { get; } = Create(
+        PlaytestWidth,
+        PlaytestHeight,
+        PlaytestChunkWidth,
+        PlaytestChunkHeight);
 
     private WorldConfiguration(
         int width,

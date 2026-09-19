@@ -52,12 +52,9 @@ public sealed class BuildingIdentityAndPlacementTests
     public void Valid_placement_succeeds()
     {
         var host = EmptySite();
-        var origin = FirstOpenLand(host);
-        var result = host.Placement.TryPlace(BuildingTypeId.Farm, origin);
-        Assert.True(result.Success);
-        Assert.NotNull(result.Building);
-        Assert.Equal(BuildingLifecycle.Active, result.Building!.Lifecycle);
-        Assert.True(host.World.Grid.GetCell(origin).Occupancy.IsOccupied);
+        var placed = SettlementTestSupport.PlaceNear(host, BuildingTypeId.Farm, host.Population[0].Position);
+        Assert.Equal(BuildingLifecycle.Active, placed.Lifecycle);
+        Assert.True(host.World.Grid.GetCell(placed.Origin).Occupancy.IsOccupied);
     }
 
     [Fact]
@@ -74,20 +71,22 @@ public sealed class BuildingIdentityAndPlacementTests
     public void Occupied_placement_fails()
     {
         var host = EmptySite();
-        var origin = FirstOpenLand(host);
-        Assert.True(host.Placement.TryPlace(BuildingTypeId.Shelter, origin).Success);
-        var second = host.Placement.TryPlace(BuildingTypeId.Farm, origin);
+        var first = SettlementTestSupport.PlaceNear(host, BuildingTypeId.Shelter, host.Population[0].Position);
+        var second = host.Placement.TryPlace(BuildingTypeId.Farm, first.Origin);
         Assert.False(second.Success);
     }
 
     [Fact]
-    public void One_by_one_footprint_occupies_origin()
+    public void Occupied_footprint_includes_origin_and_covers_multiple_hexes()
     {
         var host = EmptySite();
-        var origin = FirstOpenLand(host);
-        var building = host.Placement.TryPlace(BuildingTypeId.Storage, origin).Building!;
-        Assert.Single(building.FootprintCells);
-        Assert.Equal(origin, building.FootprintCells[0]);
+        var building = SettlementTestSupport.PlaceNear(
+            host,
+            BuildingTypeId.Storage,
+            host.Population[0].Position);
+        Assert.Contains(building.Origin, building.FootprintCells);
+        Assert.True(building.FootprintCells.Count > 1);
+        Assert.All(building.FootprintCells, cell => Assert.True(host.World.Grid.GetCell(cell).Occupancy.BlocksMovement));
     }
 
     [Fact]
@@ -138,10 +137,10 @@ public sealed class BuildingIdentityAndPlacementTests
     public void Removing_a_building_frees_occupied_cells()
     {
         var host = EmptySite();
-        var origin = FirstOpenLand(host);
-        var building = host.Placement.TryPlace(BuildingTypeId.Workshop, origin).Building!;
+        var building = SettlementTestSupport.PlaceNear(host, BuildingTypeId.Workshop, host.Population[0].Position);
+        var cells = building.FootprintCells.ToArray();
         Assert.True(host.Placement.TryRemove(building.Id).Success);
-        Assert.False(host.World.Grid.GetCell(origin).Occupancy.IsOccupied);
+        Assert.All(cells, cell => Assert.False(host.World.Grid.GetCell(cell).Occupancy.IsOccupied));
         Assert.Equal(0, host.Buildings.Count);
     }
 
@@ -203,6 +202,7 @@ public sealed class ProductionAndWorkplaceTests
     {
         var host = new SimulationHost(1, populationCount: 1);
         var farm = host.Buildings.All.First(b => b.TypeId == BuildingTypeId.Farm);
+        var storage = host.Buildings.All.First(b => b.Definition.IsStorage);
         var character = host.Population[0];
         character.Position = farm.AccessCell;
         var workplace = new WorkplaceId(farm.Id, 0);
@@ -214,12 +214,12 @@ public sealed class ProductionAndWorkplaceTests
         for (var i = 0; i < evaluation.DurationTicks - 1; i++)
             host.Characters.Actions.Advance(character);
 
-        Assert.Equal(0, host.Buildings.All.First(b => b.Definition.IsStorage).Inventory.GetQuantity(ResourceType.Food));
+        Assert.Equal(0, StoredProduce(storage));
         Assert.Equal(ActionKind.Work, character.Activity.Kind);
 
         host.Characters.Actions.Advance(character);
         Assert.Equal(ActionKind.None, character.Activity.Kind);
-        Assert.True(host.Buildings.All.First(b => b.Definition.IsStorage).Inventory.GetQuantity(ResourceType.Food) >= 1);
+        Assert.True(StoredProduce(storage) >= 1);
     }
 
     [Fact]
@@ -248,7 +248,7 @@ public sealed class ProductionAndWorkplaceTests
     public void Produced_food_reaches_storage_and_can_be_eaten()
     {
         var host = new SimulationHost(1, populationCount: 1);
-        var farm = host.Buildings.All.First(b => b.TypeId == BuildingTypeId.Farm);
+        var farm = FoodFarm(host);
         var storage = host.Buildings.All.First(b => b.Definition.IsStorage);
         var character = host.Population[0];
         character.Position = farm.AccessCell;
@@ -300,13 +300,14 @@ public sealed class ProductionAndWorkplaceTests
     public void Buildings_block_movement()
     {
         var host = new SimulationHost(1, populationCount: 1, placeDevelopmentBuildings: false);
-        var origin = PopulationSpawner.FindLandOrigin(host.World);
-        var building = host.Placement.TryPlace(BuildingTypeId.Workshop, origin).Building!;
-        var blocked = building.Origin;
+        var building = SettlementTestSupport.PlaceNear(
+            host,
+            BuildingTypeId.Workshop,
+            PopulationSpawner.FindLandOrigin(host.World));
         var access = building.AccessCell;
+        var blocked = building.FootprintCells.First(cell =>
+            host.World.Topology.HexNeighbors(access).Contains(cell));
         Assert.False(host.Characters.Navigator.IsPassable(blocked));
-        Assert.True(host.Characters.Navigator.TryNeighbor(access, blocked.X - access.X, blocked.Y - access.Y, out _, out var block)
-            || block == MovementBlock.Occupancy);
         host.Characters.Navigator.TryNeighbor(
             access,
             host.World.Topology.SignedHorizontalDelta(access.X, blocked.X),
@@ -325,5 +326,29 @@ public sealed class ProductionAndWorkplaceTests
         b.Step(480);
         Assert.Equal(a.Buildings.All.Select(x => x.Snapshot()), b.Buildings.All.Select(x => x.Snapshot()));
         Assert.Equal(a.Population.All.Select(x => x.Snapshot()), b.Population.All.Select(x => x.Snapshot()));
+    }
+
+    private static int StoredProduce(BuildingState storage) =>
+        storage.Inventory.GetQuantity(ResourceType.Food)
+        + storage.Inventory.GetQuantity(ResourceType.WildBerries);
+
+    private static BuildingState FoodFarm(SimulationHost host)
+    {
+        foreach (var farm in host.Buildings.All.Where(b => b.TypeId == BuildingTypeId.Farm))
+        {
+            if (host.World.Grid.GetCell(farm.Origin).Biome is not (BiomeId.Forest or BiomeId.Taiga or BiomeId.Swamp))
+                return farm;
+        }
+
+        foreach (var cell in SettlementTestSupport.Spiral(host.World, host.Population[0].Position))
+        {
+            if (host.World.Grid.GetCell(cell).Biome is BiomeId.Forest or BiomeId.Taiga or BiomeId.Swamp)
+                continue;
+            var result = host.Placement.TryPlace(BuildingTypeId.Farm, cell);
+            if (result.Success && result.Building is not null)
+                return result.Building;
+        }
+
+        throw new InvalidOperationException("No temperate farm site.");
     }
 }

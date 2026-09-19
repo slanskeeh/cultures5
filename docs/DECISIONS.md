@@ -383,7 +383,7 @@ Exercise production without inventing civilization.
 
 Status: Accepted
 
-Building occupancy sets `BlocksMovement` from the definition (Phase 4: all development buildings block). Characters still do not occupy cells (AD-034 remainder). Navigator treats blocked occupancy as impassable.
+Building occupancy sets `BlocksMovement` from the definition (Phase 4: all development buildings block). Characters still do not occupy cells (AD-034 remainder). Navigator treats blocked occupancy as impassable. Footprints may cover many hexes (AD-126).
 
 Reason:
 Characters must walk around buildings. Doors/entrances are future work.
@@ -400,7 +400,9 @@ Replace the Phase 3 work→personal-food and sleep-anywhere loops.
 ## Open decisions
 
 ### OD-001 — Exact world dimensions
-Not fixed yet.
+**Status:** Open (partial)
+
+Playtest size is 512×256 hexes with 16×16 chunks (AD-127). Debug tests stay on 100×50. Final production size is not fixed.
 
 ### OD-002 — Exact tile/grid geometry
 **Status:** Closed
@@ -1163,7 +1165,7 @@ LOD must not invent biographies. Exploration knowledge is player/world knowledge
 
 Status: Accepted
 
-`PresentationCamera`, `PresentationSelection`, and `PresentationIdentityMap` live in Application. Camera focus and zoom are not `SimulationCursor`. Selection stores `CharacterId` / `BuildingId` / `SettlementId`. Views are recreatable from IDs in a camera window. Godot nodes must not become identity.
+`PresentationCamera`, `PresentationSelection`, and `PresentationIdentityMap` live in Application. Camera position is a continuous isometric point (`IsoX`/`IsoY`), not `SimulationCursor` and not a hex. Zoom is presentation-only. Selection stores `CharacterId` / `BuildingId` / `SettlementId`. Views are recreatable from IDs in a camera window. Godot nodes must not become identity.
 
 Reason:
 The simulation stays meaningful without sprites. Reloading a scene must rebind to the same IDs.
@@ -1217,7 +1219,7 @@ Individual animals at world scale would explode entity count. Aggregate ecology 
 
 Status: Accepted
 
-`ProfessionId` / `ProfessionCatalog` (Farmer, Woodcutter, Mason, Crafter) is a vocation. Skills remain XP on `CharacterSkills`. Changing profession does not grant skill. Unemployed adults may still work any compatible workplace; an assigned profession restricts workplaces (`BuildingDefinition.RequiredProfession` on farm). Children cannot take professions.
+`ProfessionId` / `ProfessionCatalog` is a vocation. Skills remain XP on `CharacterSkills`. Changing profession does not grant skill. Starting field jobs (`wood_gatherer`, `stone_gatherer`, `clay_gatherer`, `mushroom_gatherer`, hunter, fisher, builder, scout, porter) have `RequiresTraining=false` and may be assigned with zero skill (AD-129). Trained workplace jobs (farmer, woodcutter, mason, crafter) still match on skill. Unemployed adults may still work any compatible workplace; an assigned profession restricts workplaces (`BuildingDefinition.RequiredProfession` on farm). Children cannot take professions.
 
 Reason:
 AD-052 already separated skills from jobs. Phase 16 makes vocation explicit without collapsing the two.
@@ -1253,7 +1255,7 @@ Phase 17 asked for balance as a layer, not scattered magic numbers in presentati
 
 Status: Accepted
 
-`SimulationClock.Speed` is 1/2/4/8. Presentation requests `Step(Speed)` per tick budget. Speed is saved in the envelope. Pause still blocks `Advance`.
+`SimulationClock.Speed` is still 1–8 ticks per presentation request and is saved. Play-facing time uses three presentation rates at 25% / 40% / 60% of the 1× baseline (`PresentationSettings.PlaySpeed`, AD-130). Pause still blocks `Advance`.
 
 Reason:
 Time scale is simulation policy, not a Godot timer hack.
@@ -1338,6 +1340,24 @@ Debug tiles are 2D textures with baked extrusion, side faces, and drop shadows. 
 
 Reason:
 Volume should read from lighting/shadow on 2D art, not from a 3D mesh world.
+
+## AD-126 — Buildings occupy hex-connected polyominoes
+
+Status: Accepted
+
+A `BuildingFootprint` is N hexes of arbitrary shape, stored as cube deltas from the origin so odd-r row parity does not change the building. Rectangles are for dwellings/storage; disks and branched axial shapes are for fields and workshops. Cells must include the origin and be hex-connected. Placement occupies and blocks every cell. Access remains a passable hex neighbor of the footprint, not an interior cell.
+
+Reason:
+The player asked for multi-hex buildings (a house can be a rough rectangle; a smithy can have wings). Offset-space shapes would shear on odd rows.
+
+## AD-127 — Playtest world is large; biomes scale with it
+
+Status: Accepted
+
+Godot play uses `WorldConfiguration.Playtest` (512×256, chunk 16). Tests keep `DebugSample` (100×50, chunk 10). Generator frequencies are waves around the world, not per cell, so continents and biomes grow in hexes when the map grows. Generation version stays 1. Final production size remains OD-001.
+
+Reason:
+A 100×50 debug field made biomes look like speckle. Stretching the planet stretches geography without remixing the test world.
 
 ## OD-023 — Exact LOD radii and cadences
 
@@ -1554,3 +1574,48 @@ Units have no position. Future location must use existing world-cell coordinates
 **Status:** Open
 
 No formation shapes or multi-cell footprints for units.
+
+## AD-128 — Playable resources are stocks plus field labor
+
+Status: Accepted
+
+The playable resource loop is: natural `ResourceDeposit` / wildlife aggregate → personal `Inventory` → storage or construction site → (optional) workplace recipe. Edible stocks are Food, WildBerries, Mushrooms, Fish, and Meat (`ResourceRules`). Gather/hunt/fish/haul/construct/scout are `LaborSystem` actions, not building recipes. Construction consumes listed `ConstructionCost` after `ConstructionTicks` of builder labor. Instant `PlaceBuildingCommand.CompleteImmediately` remains for debug bootstrap; player placement starts `Constructing`.
+
+Reason:
+Phases 0–19 proved simulation seams. Playability needs a closed goods loop outside workplaces, without inventing a second economy.
+
+## AD-129 — Starting jobs need no skill
+
+Status: Accepted
+
+Starting professions are field vocations with `RequiresTraining=false`. They are assigned by `AssignProfessionCommand` or by `ProfessionBootstrap` when roster size is the playtest default (24). Bootstrap fills at most two people per starting job and leaves the rest unemployed so workplaces (farms) still run. Skill matching (`MatchProfession`) skips starting jobs so a wood gatherer is not overwritten by a level-0 farmer. Hunter and fisher may still use their camps when field labor has nothing to do.
+
+Reason:
+The first playable slice must let people work immediately. Training remains for specialized workplace jobs.
+
+## AD-130 — Play speeds are presentation rates
+
+Status: Accepted
+
+Three play gears run at 25%, 40%, and 60% of the 1× baseline (`PresentationSettings.BaselineSecondsPerTick` = 0.1s). Presentation requests `Step(1)` on that interval. `SimulationClock.Speed` remains saved domain state and is not the player-facing gear.
+
+Reason:
+The 1/2/4/8 tick multiplier made the playtest unreadable. Slowing the frame-to-tick mapping does not change what a tick means.
+
+## AD-131 — Player orders are commands, selection is presentation
+
+Status: Accepted
+
+Click selection, dashed outline, inspector, and follow-preview are Godot-only. Walking is `OrderMoveCommand`: pathfind, `IsPlayerCommanded`, then idle until F4/F6 or a new order. Survival still interrupts. The preview map is a second `WorldDebugMap` focused on the person; it does not own simulation cursor.
+
+Reason:
+AD-002. The player directs people through commands. A second camera is a view, not a second world.
+
+## AD-132 — Play camera is free isometric pan
+
+Status: Accepted
+
+The player camera lives on the continuous isometric plane (`IsoPoint` / `PresentationCamera.IsoX,IsoY`). Middle-mouse drag and edge-of-screen scroll pan it. It is not quantized to `LogicalGridCoordinate`. Hexes still exist in simulation; the view slides between them. Horizontal wrap repeats isometric X; polar Y is clamped. `SimulationCursor` remains a debug cell picker (arrow keys), not the camera.
+
+Reason:
+A hex-snapped camera felt attached to the grid. Play needs Civilization-like free look without changing world identity.

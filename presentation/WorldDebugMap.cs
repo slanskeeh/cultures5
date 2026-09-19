@@ -15,17 +15,35 @@ namespace Cultures.Presentation;
 public partial class WorldDebugMap : Control
 {
     public const int CellSize = 22;
-    public const int RadiusX = 16;
-    public const int RadiusY = 10;
+    public const int DefaultRadiusX = 16;
+    public const int DefaultRadiusY = 10;
 
     private readonly RenderProjection _projection = RenderProjection.Playtest;
 
     public SimulationHost? Host { get; set; }
     public bool HighContrast { get; set; }
+    public bool Interactive { get; set; } = true;
+    public LogicalGridCoordinate? FocusOverride { get; set; }
+    public int ViewRadiusX { get; set; } = DefaultRadiusX;
+    public int ViewRadiusY { get; set; } = DefaultRadiusY;
+    public event Action<Vector2>? Picked;
 
     public override void _Ready()
     {
-        MouseFilter = MouseFilterEnum.Ignore;
+        MouseFilter = Interactive ? MouseFilterEnum.Stop : MouseFilterEnum.Ignore;
+    }
+
+    public override void _GuiInput(InputEvent @event)
+    {
+        if (!Interactive || Host is null)
+            return;
+        if (@event is not InputEventMouseButton mouse || !mouse.Pressed)
+            return;
+        if (mouse.ButtonIndex is not (MouseButton.Left or MouseButton.Right))
+            return;
+
+        Picked?.Invoke(GetLocalMousePosition());
+        AcceptEvent();
     }
 
     public override void _Draw()
@@ -34,17 +52,18 @@ public partial class WorldDebugMap : Control
             return;
 
         var host = Host;
-        var cursor = host.Cursor.Position;
+        var anchor = ViewAnchor;
         var topology = host.World.Topology;
         var width = host.World.Configuration.Width;
         var center = Size / 2f;
 
-        for (var dy = -RadiusY; dy <= RadiusY; dy++)
+        for (var dy = -ViewRadiusY; dy <= ViewRadiusY; dy++)
         {
-            for (var dx = -RadiusX; dx <= RadiusX; dx++)
+            for (var dx = -ViewRadiusX; dx <= ViewRadiusX; dx++)
             {
-                var resolution = topology.Resolve(cursor.X + dx, cursor.Y + dy);
-                var screen = Project(center, cursor, new LogicalGridCoordinate(cursor.X + dx, cursor.Y + dy));
+                var resolution = topology.Resolve(anchor.X + dx, anchor.Y + dy);
+                var paintCell = new LogicalGridCoordinate(anchor.X + dx, anchor.Y + dy);
+                var screen = Project(center, resolution.TryGetCell(out var resolved) ? resolved : paintCell);
                 if (!resolution.IsInsideWorld || !resolution.TryGetCell(out var cell))
                 {
                     DrawColoredPolygon(HexAt(screen), new Color(0.12f, 0.07f, 0.07f));
@@ -79,16 +98,18 @@ public partial class WorldDebugMap : Control
                         DrawColoredPolygon(HexAt(screen, 0.88f), new Color(ColorForLod(host.Lod.Classify(paintChunk)), 0.22f));
                 }
 
-                if (dx == 0 && dy == 0)
+                if (cell.Equals(host.Cursor.Position))
                     DrawPolyline(HexAt(screen, 1.05f, closed: true), new Color(0.95f, 0.86f, 0.45f), 2.2f, true);
             }
         }
 
-        DrawBuildings(center, cursor);
-        DrawSettlements(center, cursor);
-        DrawCharacters(center, cursor);
+        DrawBuildings(center, anchor);
+        DrawSettlements(center, anchor);
+        DrawCharacters(center, anchor);
     }
 
+    public float CameraIsoX { get; set; }
+    public float CameraIsoY { get; set; }
     public CharacterId? SelectedId { get; set; }
     public BuildingId? SelectedBuildingId { get; set; }
     public SettlementId? SelectedSettlementId { get; set; }
@@ -104,10 +125,10 @@ public partial class WorldDebugMap : Control
         {
             var dx = Host.World.Topology.SignedHorizontalDelta(cursor.X, settlement.Core.X);
             var dy = settlement.Core.Y - cursor.Y;
-            if (Math.Abs(dx) > RadiusX || Math.Abs(dy) > RadiusY)
+            if (Math.Abs(dx) > ViewRadiusX || Math.Abs(dy) > ViewRadiusY)
                 continue;
 
-            var pos = Project(center, cursor, settlement.Core);
+            var pos = Project(center, settlement.Core);
             var color = ColorForSettlement(settlement.Id, settlement.Lifecycle);
             DrawArc(pos, CellSize * 0.55f, 0, MathF.Tau, 20, color, 2);
             if (SelectedSettlementId == settlement.Id)
@@ -139,10 +160,10 @@ public partial class WorldDebugMap : Control
             {
                 var dx = Host.World.Topology.SignedHorizontalDelta(cursor.X, cell.X);
                 var dy = cell.Y - cursor.Y;
-                if (Math.Abs(dx) > RadiusX || Math.Abs(dy) > RadiusY)
+                if (Math.Abs(dx) > ViewRadiusX || Math.Abs(dy) > ViewRadiusY)
                     continue;
 
-                var pos = Project(center, cursor, cell);
+                var pos = Project(center, cell);
                 var sprite = new Rect2(pos.X - 28, pos.Y - 32, SimpleTextures.Tile * 0.85f, SimpleTextures.Tile * 0.85f);
                 DrawTextureRect(SimpleTextures.Building(building.TypeId), sprite, false);
                 if (SelectedBuildingId == building.Id)
@@ -160,12 +181,15 @@ public partial class WorldDebugMap : Control
         {
             var dx = Host.World.Topology.SignedHorizontalDelta(cursor.X, character.Position.X);
             var dy = character.Position.Y - cursor.Y;
-            if (Math.Abs(dx) > RadiusX || Math.Abs(dy) > RadiusY)
+            if (Math.Abs(dx) > ViewRadiusX || Math.Abs(dy) > ViewRadiusY)
                 continue;
 
-            var pos = Project(center, cursor, character.Position);
+            var pos = Project(center, character.Position);
+            var selected = SelectedId == character.Id;
             var sprite = new Rect2(pos.X - 26, pos.Y - 34, SimpleTextures.Tile * 0.82f, SimpleTextures.Tile * 0.82f);
-            DrawTextureRect(SimpleTextures.Character(character.LifeStage, SelectedId == character.Id), sprite, false);
+            DrawTextureRect(SimpleTextures.Character(character.LifeStage, selected), sprite, false);
+            if (selected)
+                DrawDashedHex(pos, 1.12f, new Color(1f, 0.92f, 0.35f), 2.4f);
             if (character.Settlement.IsAssigned)
                 DrawArc(pos, CellSize * 0.38f, 0, MathF.Tau, 12, ColorForSettlement(character.Settlement, SettlementLifecycle.Established));
         }
@@ -231,11 +255,13 @@ public partial class WorldDebugMap : Control
         _ => new Color(0.05f, 0.05f, 0.07f)
     };
 
-    private Vector2 Project(Vector2 center, LogicalGridCoordinate cursor, LogicalGridCoordinate cell)
+    private Vector2 Project(Vector2 center, LogicalGridCoordinate cell)
     {
-        var dx = Host!.World.Topology.SignedHorizontalDelta(cursor.X, cell.X);
-        var rel = _projection.RelativeTo(cursor, cell, dx);
-        return new Vector2(center.X + rel.X, center.Y + rel.Y);
+        var anchor = ViewAnchor;
+        var dx = Host!.World.Topology.SignedHorizontalDelta(anchor.X, cell.X);
+        var iso = _projection.ToIsoUnwrapped(anchor.X + dx, cell.Y);
+        var cam = ViewIso;
+        return new Vector2(center.X + iso.X - cam.X, center.Y + iso.Y - cam.Y);
     }
 
     private Vector2[] HexAt(Vector2 origin, float scale = 1f, bool closed = false)
@@ -255,5 +281,93 @@ public partial class WorldDebugMap : Control
             verts[6] = verts[0];
 
         return verts;
+    }
+
+    private void DrawDashedHex(Vector2 origin, float scale, Color color, float width)
+    {
+        var verts = HexAt(origin, scale);
+        for (var i = 0; i < 6; i++)
+            DrawDashedLine(verts[i], verts[(i + 1) % 6], color, width, 5.5f, false, true);
+    }
+
+    private IsoPoint ViewIso =>
+        FocusOverride is { } cell ? _projection.ToIso(cell) : new IsoPoint(CameraIsoX, CameraIsoY);
+
+    private LogicalGridCoordinate ViewAnchor
+    {
+        get
+        {
+            if (FocusOverride is { } overrideCell)
+                return overrideCell;
+            if (Host is null)
+                return default;
+            var raw = _projection.ApproximateCell(CameraIsoX, CameraIsoY);
+            var resolution = Host.World.Topology.Resolve(raw.X, raw.Y);
+            if (resolution.TryGetCell(out var cell))
+                return cell;
+            return new LogicalGridCoordinate(
+                Host.World.Topology.WrapX(raw.X),
+                Math.Clamp(raw.Y, 0, Host.World.Configuration.Height - 1));
+        }
+    }
+
+    public bool TryPick(Vector2 local, out LogicalGridCoordinate cell, out CharacterId? person)
+    {
+        cell = default;
+        person = null;
+        if (Host is null)
+            return false;
+
+        var cursor = ViewAnchor;
+        var center = Size / 2f;
+        var topology = Host.World.Topology;
+        CharacterState? nearestPerson = null;
+        var nearestPersonDistance = float.MaxValue;
+        foreach (var character in Host.Population.All)
+        {
+            if (!character.IsAlive)
+                continue;
+            var dx = topology.SignedHorizontalDelta(cursor.X, character.Position.X);
+            var dy = character.Position.Y - cursor.Y;
+            if (Math.Abs(dx) > ViewRadiusX || Math.Abs(dy) > ViewRadiusY)
+                continue;
+            var screen = Project(center, character.Position);
+            var distance = local.DistanceSquaredTo(screen);
+            if (distance >= nearestPersonDistance || distance > CellSize * CellSize * 2.4f)
+                continue;
+            nearestPersonDistance = distance;
+            nearestPerson = character;
+        }
+
+        if (nearestPerson is not null)
+        {
+            cell = nearestPerson.Position;
+            person = nearestPerson.Id;
+            return true;
+        }
+
+        var best = float.MaxValue;
+        LogicalGridCoordinate? found = null;
+        for (var dy = -ViewRadiusY; dy <= ViewRadiusY; dy++)
+        {
+            for (var dx = -ViewRadiusX; dx <= ViewRadiusX; dx++)
+            {
+                var resolution = topology.Resolve(cursor.X + dx, cursor.Y + dy);
+                if (!resolution.TryGetCell(out var candidate))
+                    continue;
+                var screen = Project(center, candidate);
+                var distance = local.DistanceSquaredTo(screen);
+                if (distance >= best || distance > CellSize * CellSize * 1.6f)
+                    continue;
+                best = distance;
+                found = candidate;
+            }
+        }
+
+        if (found is null)
+            return false;
+
+        cell = found.Value;
+        return true;
     }
 }

@@ -25,6 +25,22 @@ public sealed class RenderProjectionTests
     }
 
     [Fact]
+    public void Free_iso_roundtrips_without_snapping_to_a_hex()
+    {
+        var projection = RenderProjection.Playtest;
+        var cell = new LogicalGridCoordinate(6, 9);
+        var iso = projection.ToIso(cell);
+        Assert.Equal(cell, projection.ApproximateCell(iso.X, iso.Y));
+
+        var odd = new LogicalGridCoordinate(3, 1);
+        Assert.Equal(odd, projection.ApproximateCell(projection.ToIso(odd).X, projection.ToIso(odd).Y));
+
+        var shifted = new IsoPoint(iso.X + 4.25f, iso.Y + 1.75f);
+        Assert.Equal(iso.X + 4.25f, shifted.X);
+        Assert.NotEqual(iso, shifted);
+    }
+
+    [Fact]
     public void Relative_projection_uses_wrapped_horizontal_delta()
     {
         var projection = RenderProjection.Playtest;

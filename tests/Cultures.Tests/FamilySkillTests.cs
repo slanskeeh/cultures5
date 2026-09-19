@@ -190,7 +190,7 @@ public sealed class SkillAndProductionTests
     {
         var host = new SimulationHost(1, populationCount: 2, placeDevelopmentBuildings: false);
         var origin = PopulationSpawner.FindLandOrigin(host.World);
-        var farm = host.Placement.TryPlace(BuildingTypeId.Farm, origin).Building!;
+        var farm = SettlementTestSupport.PlaceNear(host, BuildingTypeId.Farm, origin);
         var low = host.Population[0];
         var high = host.Population[1];
         low.Skills.SetLevel(SkillType.Farming, 5);

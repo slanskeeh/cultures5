@@ -78,7 +78,7 @@ View:
 
 Never put authoritative hunger, inventory, family, profession or history only in a Node.
 
-Presentation selection and camera live in Application (`PresentationCamera`, `PresentationSelection`). Godot draws from domain IDs. The debug map uses procedural 64×64 2.5D hex textures for biomes, buildings and life stages; this is not final art. Exploration overlay must not leak raw unexplored terrain facts.
+Presentation selection and camera live in Application (`PresentationCamera`, `PresentationSelection`). The play camera is a continuous isometric point (`IsoX`/`IsoY`); Godot pans it with middle mouse and screen-edge scroll and must not snap it to hexes. Godot draws from domain IDs. The debug map uses procedural 64×64 2.5D hex textures for biomes, buildings and life stages; this is not final art. Exploration overlay must not leak raw unexplored terrain facts.
 
 ## 4. Stable IDs
 
@@ -188,9 +188,9 @@ Godot is responsible for:
 - asset loading;
 - presentation.
 
-Debug presentation currently paints procedural 2.5D hex `ImageTexture` tiles (`SimpleTextures`) from a 60° isometric projection. Camera zoom is presentation-only and does not move `SimulationCursor`. F5/F9 save slots, F1 help, F11 high contrast, and F12 HUD size are presentation.
+Debug presentation currently paints procedural 2.5D hex `ImageTexture` tiles (`SimpleTextures`) from a 60° isometric projection. The play camera pans freely (middle mouse, screen edges) in isometric space and does not snap to hexes. Click a person to select (dashed outline + inspector/preview). Click ground to order a walk (`OrderMoveCommand`). F2/F3 starting jobs, F4/F6 labor, F7 constructing huts, -/= play speeds 1–3 (25/40/60% of 1×), F5/F9 save, F1 help, F11 high contrast, and F12 HUD size are presentation. Domain labor lives in `LaborSystem`.
 
-Godot does not own the hex grid. The authoritative cell is `LogicalGridCoordinate` (AD-123). Godot's tile tools are a presentation/authoring aid, not the simulation source of truth.
+Godot does not own the hex grid. The authoritative cell is `LogicalGridCoordinate` (AD-123). Buildings occupy hex-connected polyominoes (AD-126). The playable map is `WorldConfiguration.Playtest`; tests use `DebugSample`. Godot's tile tools are a presentation/authoring aid, not the simulation source of truth.
 
 ## 10. Threading
 

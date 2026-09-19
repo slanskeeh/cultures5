@@ -1,4 +1,5 @@
 using Cultures.Core.Ids;
+using Cultures.Economy;
 using Cultures.World;
 
 namespace Cultures.Population;
@@ -22,7 +23,12 @@ public enum ActionKind : byte
     Sleep = 4,
     Work = 5,
     Teach = 6,
-    Learn = 7
+    Learn = 7,
+    Gather = 8,
+    Hunt = 9,
+    Construct = 10,
+    Haul = 11,
+    Scout = 12
 }
 
 public sealed class CharacterNeeds
@@ -55,6 +61,8 @@ public sealed class CharacterActivity
     public int ProgressTicks { get; private set; }
     public CharacterId PartnerId { get; private set; }
     public SkillType? Skill { get; private set; }
+    public ResourceType? JobResource { get; private set; }
+    public BuildingId JobBuilding { get; private set; }
     public Queue<LogicalGridCoordinate> RemainingPath { get; } = new();
 
     public bool IsComplete => Kind != ActionKind.None && ProgressTicks >= DurationTicks;
@@ -65,7 +73,9 @@ public sealed class CharacterActivity
         int durationTicks,
         LogicalGridCoordinate? target = null,
         CharacterId partner = default,
-        SkillType? skill = null)
+        SkillType? skill = null,
+        ResourceType? jobResource = null,
+        BuildingId jobBuilding = default)
     {
         Kind = kind;
         DurationTicks = Math.Max(1, durationTicks);
@@ -73,6 +83,8 @@ public sealed class CharacterActivity
         Target = target;
         PartnerId = partner;
         Skill = skill;
+        JobResource = jobResource;
+        JobBuilding = jobBuilding;
         RemainingPath.Clear();
     }
 
@@ -83,7 +95,9 @@ public sealed class CharacterActivity
         LogicalGridCoordinate? target,
         CharacterId partner,
         SkillType? skill,
-        IEnumerable<LogicalGridCoordinate>? path)
+        IEnumerable<LogicalGridCoordinate>? path,
+        ResourceType? jobResource = null,
+        BuildingId jobBuilding = default)
     {
         Kind = kind;
         DurationTicks = Math.Max(0, durationTicks);
@@ -91,6 +105,8 @@ public sealed class CharacterActivity
         Target = target;
         PartnerId = partner;
         Skill = skill;
+        JobResource = jobResource;
+        JobBuilding = jobBuilding;
         RemainingPath.Clear();
         if (path is null)
             return;
@@ -106,6 +122,8 @@ public sealed class CharacterActivity
         Target = null;
         PartnerId = CharacterId.None;
         Skill = null;
+        JobResource = null;
+        JobBuilding = default;
         RemainingPath.Clear();
     }
 

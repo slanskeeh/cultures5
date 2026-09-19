@@ -73,6 +73,8 @@ WorldSeed
 
 The same seed + same generation version must produce the same initial world.
 
+Noise frequencies are cycles around the world / across latitude. A larger Width/Height therefore yields larger continents and biome regions in hexes (AD-127). Do not bump generation version merely to enlarge the playable map.
+
 ## 6. Geography causality
 
 Geography should influence:
@@ -176,7 +178,7 @@ The desired visual direction is:
 - readable silhouettes;
 - limited visual noise.
 
-Debug map projects pointy-top hexes through `RenderProjection` and paints procedural 2.5D tiles (`SimpleTextures`). Not final art. Unexplored cells use knowledge colors only; raw biome is not leaked.
+Debug map projects pointy-top hexes through `RenderProjection` and paints procedural 2.5D tiles (`SimpleTextures`). The play camera pans continuously in isometric space (AD-132); it does not snap to hexes. Not final art. Unexplored cells use knowledge colors only; raw biome is not leaked.
 
 Large visual assets can occupy multiple logical cells. Camera zoom is presentation-only.
 
@@ -185,10 +187,12 @@ Large visual assets can occupy multiple logical cells. Camera zoom is presentati
 Building placement uses logical coordinates and footprints.
 
 A building definition contains:
-- footprint;
-- anchor point;
+- a hex-connected footprint of N cells (rectangle, disk, or branched cube polyomino; AD-126);
+- anchor / origin cell;
 - allowed terrain;
-- construction requirements;
+- construction requirements (`ConstructionCost` + `ConstructionTicks`; player placement starts Constructing);
 - supported production rules.
+
+Every occupied footprint cell blocks movement. The renderer draws each footprint cell; it does not invent extra occupancy.
 
 The renderer calculates the visual position from the logical placement.

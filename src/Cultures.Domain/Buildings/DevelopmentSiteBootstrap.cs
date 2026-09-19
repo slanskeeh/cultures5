@@ -55,8 +55,8 @@ public static class DevelopmentSiteBootstrap
     {
         var preferred = new (int Dx, int Dy)[]
         {
-            (5, 0), (5, 2), (8, 0), (8, 2), (11, 0),
-            (5, -2), (8, -2), (14, 0), (11, 2), (14, 2)
+            (5, 4), (5, -4), (8, 5), (8, -5), (9, 0),
+            (4, 0), (10, 4), (10, -4), (7, 6)
         };
         foreach (var (dx, dy) in preferred)
         {
@@ -65,7 +65,7 @@ public static class DevelopmentSiteBootstrap
                 yield return cell;
         }
 
-        for (var radius = 3; radius <= 18; radius++)
+        for (var radius = 4; radius <= 24; radius++)
         {
             for (var dx = -radius; dx <= radius; dx++)
             {

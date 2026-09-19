@@ -23,4 +23,17 @@ public sealed class WorldConfigurationTests
         Assert.Equal(5, cfg.ChunkCountY);
         Assert.Equal(WorldGeneration.CurrentVersion, cfg.GenerationVersion);
     }
+
+    [Fact]
+    public void Playtest_world_is_much_larger_than_the_debug_sample()
+    {
+        var play = WorldConfiguration.Playtest;
+        var debug = WorldConfiguration.DebugSample;
+        Assert.Equal(512, play.Width);
+        Assert.Equal(256, play.Height);
+        Assert.Equal(16, play.ChunkWidth);
+        Assert.Equal(32, play.ChunkCountX);
+        Assert.Equal(16, play.ChunkCountY);
+        Assert.True(play.Width * play.Height >= debug.Width * debug.Height * 20);
+    }
 }

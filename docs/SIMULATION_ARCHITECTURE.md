@@ -215,6 +215,8 @@ Phase 4 implements this as `ProductionResolver` + `IEnvironmentProductionModifie
 
 Natural deposits (`ResourceDeposit`) are world stocks, not character inventory. Wildlife is a per-chunk aggregate.
 
+Starting field labor is `LaborSystem` (gather, hunt, fish, haul, construct, scout). Decision order remains hunger → fatigue → player hold → field labor → workplace. `OrderMoveCommand` is a player walk; while `IsPlayerCommanded` the person idles after arriving. Unemployed adults may still take any workplace (AD-112). Construction is a building lifecycle, not a recipe.
+
 ## 12. Settlements
 
 Phase 6 implements settlements as persistent groupings that emerge from living characters plus active infrastructure.

@@ -3,6 +3,8 @@ using Cultures.World;
 
 namespace Cultures.World.Commands;
 
+public sealed record SetDebugCursorCommand(LogicalGridCoordinate Position) : ICommand;
+
 public sealed record MoveDebugCursorCommand(int Dx, int Dy) : ICommand;
 
 public sealed record SetOccupancyCommand(WorldCoordinate Position, Occupancy Occupancy) : ICommand;
@@ -34,6 +36,22 @@ public sealed class SetOccupancyHandler : ICommandHandler<SetOccupancyCommand>
         if (!_world.Grid.TrySetOccupancy(command.Position, command.Occupancy))
             return CommandResult.Fail("Position is outside the world.");
 
+        return CommandResult.Ok();
+    }
+}
+
+public sealed class SetDebugCursorHandler : ICommandHandler<SetDebugCursorCommand>
+{
+    private readonly SimulationCursor _cursor;
+
+    public SetDebugCursorHandler(SimulationCursor cursor)
+    {
+        _cursor = cursor ?? throw new ArgumentNullException(nameof(cursor));
+    }
+
+    public CommandResult Handle(SetDebugCursorCommand command)
+    {
+        _cursor.Restore(command.Position);
         return CommandResult.Ok();
     }
 }

@@ -42,10 +42,19 @@ public readonly record struct ChunkAddress(ChunkCoordinate Chunk, ChunkLocalCoor
 
 /// <summary>
 /// Non-authoritative isometric space. Never used as simulation position.
+/// Integer pixels for discrete blit; <see cref="IsoPoint"/> is the free camera space.
 /// </summary>
 public readonly record struct IsometricRenderCoordinate(int X, int Y)
 {
     public override string ToString() => $"Iso({X},{Y})";
+}
+
+/// <summary>
+/// Continuous isometric plane for a free camera. Not a world cell.
+/// </summary>
+public readonly record struct IsoPoint(float X, float Y)
+{
+    public override string ToString() => $"IsoPoint({X:0.00},{Y:0.00})";
 }
 
 /// <summary>

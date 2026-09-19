@@ -37,6 +37,8 @@ public sealed class NaturalResourceSystem
         TrySeedDeposit(cell, terrain.Biome, EcologyRules.Suitability(terrain.Biome));
         if (terrain.Biome == BiomeId.Forest || terrain.Biome == BiomeId.Taiga)
             TrySeedDeposit(cell, terrain.Biome, ResourceType.WildBerries);
+        if (terrain.Biome is BiomeId.Forest or BiomeId.Taiga or BiomeId.Swamp)
+            TrySeedDeposit(cell, terrain.Biome, ResourceType.Mushrooms);
         if (terrain.HasRiver || terrain.Biome == BiomeId.TemperateLand || terrain.Biome == BiomeId.Swamp)
             TrySeedDeposit(cell, terrain.Biome, ResourceType.Clay);
         if (terrain.Biome == BiomeId.Highland)
@@ -50,7 +52,13 @@ public sealed class NaturalResourceSystem
     {
         EnsureCell(cell);
         if (!Deposits.TryGetAt(cell, resource, out var deposit))
-            return resource is ResourceType.Food or ResourceType.WildBerries;
+        {
+            if (resource is ResourceType.Food or ResourceType.WildBerries or ResourceType.Mushrooms)
+                return true;
+            if (resource == ResourceType.Fish)
+                return HasWaterNeighbor(cell);
+            return false;
+        }
         if (deposit.Stock < amount)
             return false;
         deposit.Stock -= amount;
@@ -171,5 +179,16 @@ public sealed class NaturalResourceSystem
             h = (h ^ d) * 0x9E3779B97F4A7C15UL;
             return h;
         }
+    }
+
+    private bool HasWaterNeighbor(LogicalGridCoordinate cell)
+    {
+        foreach (var neighbor in World.Topology.HexNeighbors(cell))
+        {
+            if (World.Grid.GetCell(neighbor).IsWater)
+                return true;
+        }
+
+        return false;
     }
 }

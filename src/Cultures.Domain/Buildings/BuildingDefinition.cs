@@ -1,3 +1,4 @@
+using Cultures.Economy;
 using Cultures.Population;
 
 namespace Cultures.Buildings;
@@ -19,12 +20,16 @@ public sealed class BuildingDefinition
         bool isShelter,
         bool isStorage,
         ProfessionId? requiredProfession = null,
-        bool requiresWaterAdjacent = false)
+        bool requiresWaterAdjacent = false,
+        IReadOnlyList<ResourceStack>? constructionCost = null,
+        int constructionTicks = 24)
     {
         if (workplaceCount < 0)
             throw new ArgumentOutOfRangeException(nameof(workplaceCount));
         if (storageCapacity < 0)
             throw new ArgumentOutOfRangeException(nameof(storageCapacity));
+        if (constructionTicks <= 0)
+            throw new ArgumentOutOfRangeException(nameof(constructionTicks));
 
         TypeId = typeId;
         NameKey = nameKey;
@@ -38,6 +43,8 @@ public sealed class BuildingDefinition
         IsStorage = isStorage;
         RequiredProfession = requiredProfession;
         RequiresWaterAdjacent = requiresWaterAdjacent;
+        ConstructionCost = constructionCost ?? [];
+        ConstructionTicks = constructionTicks;
     }
 
     public BuildingTypeId TypeId { get; }
@@ -52,6 +59,8 @@ public sealed class BuildingDefinition
     public bool IsStorage { get; }
     public ProfessionId? RequiredProfession { get; }
     public bool RequiresWaterAdjacent { get; }
+    public IReadOnlyList<ResourceStack> ConstructionCost { get; }
+    public int ConstructionTicks { get; }
 }
 
 public sealed class BuildingCatalog
@@ -84,18 +93,20 @@ public sealed class BuildingCatalog
         new BuildingDefinition(
             BuildingTypeId.Shelter,
             "shelter",
-            BuildingFootprint.Cell1x1,
+            BuildingFootprint.Rect(3, 2),
             occupiesCells: true,
             blocksMovement: true,
             workplaceCount: 0,
             recipe: null,
             storageCapacity: 0,
             isShelter: true,
-            isStorage: false),
+            isStorage: false,
+            constructionCost: [new ResourceStack(ResourceType.Wood, 3)],
+            constructionTicks: 24),
         new BuildingDefinition(
             BuildingTypeId.Farm,
             "farm",
-            BuildingFootprint.Cell1x1,
+            BuildingFootprint.Disk(1),
             occupiesCells: true,
             blocksMovement: true,
             workplaceCount: 1,
@@ -103,33 +114,50 @@ public sealed class BuildingCatalog
             storageCapacity: 16,
             isShelter: false,
             isStorage: false,
-            requiredProfession: ProfessionId.Farmer),
+            requiredProfession: ProfessionId.Farmer,
+            constructionCost: [new ResourceStack(ResourceType.Wood, 2)],
+            constructionTicks: 24),
         new BuildingDefinition(
             BuildingTypeId.Storage,
             "storage",
-            BuildingFootprint.Cell1x1,
+            BuildingFootprint.Rect(2, 2),
             occupiesCells: true,
             blocksMovement: true,
             workplaceCount: 0,
             recipe: null,
             storageCapacity: 256,
             isShelter: false,
-            isStorage: true),
+            isStorage: true,
+            constructionCost:
+            [
+                new ResourceStack(ResourceType.Wood, 4),
+                new ResourceStack(ResourceType.Stone, 1)
+            ],
+            constructionTicks: 30),
         new BuildingDefinition(
             BuildingTypeId.Workshop,
             "workshop",
-            BuildingFootprint.Cell1x1,
+            BuildingFootprint.FromCubeOffsets(
+                (0, 0), (1, 0), (2, 0),
+                (0, 1), (0, 2),
+                (1, -1)),
             occupiesCells: true,
             blocksMovement: true,
             workplaceCount: 1,
             recipe: RecipeId.WorkshopWood,
             storageCapacity: 16,
             isShelter: false,
-            isStorage: false),
+            isStorage: false,
+            constructionCost:
+            [
+                new ResourceStack(ResourceType.Wood, 6),
+                new ResourceStack(ResourceType.Stone, 2)
+            ],
+            constructionTicks: 40),
         new BuildingDefinition(
             BuildingTypeId.HuntingCamp,
             "hunting_camp",
-            BuildingFootprint.Cell1x1,
+            BuildingFootprint.Rect(2, 2),
             occupiesCells: true,
             blocksMovement: true,
             workplaceCount: 1,
@@ -137,11 +165,13 @@ public sealed class BuildingCatalog
             storageCapacity: 16,
             isShelter: false,
             isStorage: false,
-            requiredProfession: ProfessionId.Hunter),
+            requiredProfession: ProfessionId.Hunter,
+            constructionCost: [new ResourceStack(ResourceType.Wood, 2)],
+            constructionTicks: 20),
         new BuildingDefinition(
             BuildingTypeId.Fishery,
             "fishery",
-            BuildingFootprint.Cell1x1,
+            BuildingFootprint.FromCubeOffsets((0, 0), (1, 0), (2, 0)),
             occupiesCells: true,
             blocksMovement: true,
             workplaceCount: 1,
@@ -150,6 +180,8 @@ public sealed class BuildingCatalog
             isShelter: false,
             isStorage: false,
             requiredProfession: ProfessionId.Fisher,
-            requiresWaterAdjacent: true)
+            requiresWaterAdjacent: true,
+            constructionCost: [new ResourceStack(ResourceType.Wood, 3)],
+            constructionTicks: 24)
     ]);
 }

@@ -1250,5 +1250,206 @@ Continue playtest polish. Do not invent war or a 3D mesh world.
 - Do not bump generation version for this visual/topology change.
 - Do not claim GUI verification unless a window was inspected.
 
+---
+
+### [2026-09-20] — Task: Multi-hex buildings and a much larger biome map
+
+**Task**
+- Buildings occupy N hexes of arbitrary shape (a dwelling can be a rough rectangle; a smithy can have wings).
+- Biomes and the whole map must be much larger.
+
+**Done**
+- `BuildingFootprint` stores cube deltas so shape is independent of odd-r row. Rect / Disk / branched axial polyominoes. Placement occupies every cell.
+- Development catalog: shelter 3×2, storage 2×2, farm hex disk 7, workshop branched 6, hunting camp 2×2, fishery 3-hex bar.
+- Playtest world 512×256 (chunk 16). Tests stay on 100×50. Noise remains cycles-per-world, so biomes grow with the map. Generation version stays 1.
+- Godot `Main` uses `WorldConfiguration.Playtest`.
+
+**Working / verified**
+- 236/236 domain tests pass with `-warnaserror`.
+- Solution build: 0 warnings / 0 errors.
+- Godot 4.7.2.stable.mono headless `--quit-after 45` exit 0.
+- Interactive large-map look was not inspected in a GUI window.
+
+**Tests**
+- `dotnet test tests/Cultures.Tests/Cultures.Tests.csproj -warnaserror` — PASS (236 passed, 0 failed). Previously 230; +6 footprint/world-size tests.
+- `dotnet build Cultures.sln -warnaserror` — PASS
+- Godot 4.7.2.stable.mono headless `--quit-after 45` — PASS (exit 0)
+
+**Bugs found**
+- Origins 14+ cells apart put people and buildings in non-adjacent chunks, so settlements did not emerge on the 10×10 debug lattice.
+- A forest farm yields `WildBerries`, not `Food`; eat-loop tests must pick a temperate farm.
+
+**Bugs fixed**
+- Development buildings stay within neighboring chunks of the spawn origin.
+- Footprint tests place through spiral search instead of assuming the first land cell fits a disk.
+
+**Known limitations / TODO**
+- Exact production world size remains OD-001.
+- Footprint art is still one procedural tile per occupied hex, not a unique multi-hex sprite.
+- Old 1×1 debug saves rematerialize the new shapes from origin.
+
+**Architecture decisions**
+- AD-126 hex polyomino footprints
+- AD-127 playtest 512×256, biomes scale with world size
+
+**Next step**
+Play the large hex map. Do not invent war or bump generation version to enlarge geography.
+
+**Notes for ChatGPT**
+- Do not put simulation tests on Playtest size; DebugSample stays 100×50.
+- Do not author building shapes as offset-only blobs if they must look the same on even and odd rows.
+- Do not claim GUI verification unless a window was inspected.
+
+---
+
+### [2026-09-20] — Task: Playable labor, resources, construction, HUD
+
+**Task**
+- Make the debug sandbox playable: character AI that works, interaction, a HUD, a resource loop, construction, and starting professions that do not require skill (gather wood/stone/clay/mushrooms, fisher, hunter, builder, scout, porter).
+
+**Done**
+- `LaborSystem` plans gather/hunt/fish/haul/construct/scout. `CharacterDecisionSystem` uses it after hunger/fatigue and before workplaces.
+- Starting professions in `ProfessionCatalog` with `RequiresTraining=false`. `ProfessionBootstrap` (pop ≥ 24) assigns at most two people per starting job and leaves the rest unemployed so farms still run.
+- `ResourceRules.Edible` includes Food, WildBerries, Mushrooms, Fish, Meat. Ecology seeds mushrooms/clay; fish extract from water-adjacent land.
+- Buildings have `ConstructionCost` / `ConstructionTicks`. Player `PlaceBuildingCommand(CompleteImmediately: false)` starts Constructing. Bootstrap still completes instantly.
+- Player commands `DirectLabor` / `StopLabor`. Godot HUD: click-to-select, F2/F3 starting job, F4 work, F6 stop, F7 constructing hut.
+
+**Working / verified**
+- 246/246 domain tests pass with `-warnaserror`.
+- Solution build: 0 warnings / 0 errors.
+- Godot 4.7.2.stable.mono headless `--quit-after 45` exit 0.
+- Interactive click/HUD layout was not inspected in a GUI window.
+
+**Tests**
+- `dotnet test tests/Cultures.Tests/Cultures.Tests.csproj -warnaserror` — PASS (246 passed, 0 failed). Previously 236; +10 playable labor tests.
+- `dotnet build Cultures.sln -warnaserror` — PASS
+- Godot 4.7.2.stable.mono headless `--quit-after 45` — PASS (exit 0)
+
+**Bugs found**
+- Workshop catalog entry lost `recipe`/`storageCapacity` while adding construction cost (positional constructor).
+- Shelter `StorageCapacity` is 0; runtime inventory still gets a floor of 16 so construction materials can sit on site.
+- Standing on a farm access cell without an assigned workplace produced Idle instead of Work (`BeginMove` short-circuited).
+
+**Bugs fixed**
+- Workshop definition restored to `RecipeId.WorkshopWood` + storage 16.
+- `ChooseKind` starts Work when already on a free workplace access cell.
+
+**Known limitations / TODO**
+- Construction progress and job resource are not extra save-record fields (v4 JSON kept stable). In-progress construct/gather restores as idle.
+- Field search is a square ring, not hex disk. Porter/builder share one global construction site (first Constructing building).
+- HUD is still a debug overlay on top of playable controls.
+- GUI click/HUD layout was not verified in a window.
+
+**Architecture decisions**
+- AD-128 playable resources are stocks plus field labor
+- AD-129 starting jobs need no skill
+- AD-112 updated: starting field jobs vs trained workplace jobs
+
+**Next step**
+Play it. Then talk about the next playable gap (better orders, unique building art, or economy depth). Do not invent war.
+
+**Notes for ChatGPT**
+- Do not auto-assign starting jobs when `populationCount < 24` — farm tests rely on unemployed adults.
+- Do not persist extra v4 fields without a migration.
+- Do not claim GUI verification unless a window was inspected.
+
+---
+
+### [2026-09-20] — Task: Play speeds, mouse select, inspector preview
+
+**Task**
+- Three simulation speeds at 25% / 40% / 60% of the previous 1× rate.
+- Mouse selection with a dashed outline.
+- Click-to-order walking.
+- Bottom-right character inspector with a live follow-preview camera.
+
+**Done**
+- `PresentationSettings.PlaySpeed` 1–3 maps to 0.25 / 0.40 / 0.60 of `BaselineSecondsPerTick`. Main steps `1` tick on that interval. `-` / `=` change the gear.
+- Map `MouseFilter` stop; background ignore. Pick prefers the nearest living person by screen distance, then the hex.
+- Selected person gets a dashed hex. Ground click issues `OrderMoveCommand`; they walk and then hold idle. F4 releases the hold.
+- Inspector panel (bottom-right) with bio/job/needs and a second `WorldDebugMap` focused on that person.
+
+**Working / verified**
+- 246/246 domain tests pass with `-warnaserror`.
+- Solution build: 0 warnings / 0 errors.
+- Godot 4.7.2.stable.mono headless `--quit-after 45` exit 0.
+- Interactive click/inspector layout was not inspected in a GUI window.
+
+**Tests**
+- `dotnet test tests/Cultures.Tests/Cultures.Tests.csproj -warnaserror` — PASS (246 passed, 0 failed)
+- `dotnet build Cultures.sln -warnaserror` — PASS
+- Godot 4.7.2.stable.mono headless `--quit-after 45` — PASS (exit 0)
+
+**Bugs found**
+- Left click lived in `_UnhandledInput` while full-screen Controls consumed GUI mouse, so selection never fired.
+- Sprite clicks often missed the hex center, so people were not selected.
+
+**Bugs fixed**
+- Map `_GuiInput` + character-first picking.
+
+**Known limitations / TODO**
+- Only walk is a world click-order; jobs still use F-keys.
+- Preview is a second debug map, not a true SubViewport 3D camera.
+- GUI layout was not verified in a window.
+
+**Architecture decisions**
+- AD-130 play speeds are presentation rates
+- AD-131 player orders are commands; selection is presentation
+- AD-116 updated: Clock.Speed is not the player-facing gear
+
+**Next step**
+Click people in a real window. Then more orders if needed. Do not invent war.
+
+**Notes for ChatGPT**
+- Do not drive play speed with `Clock.Speed` 2/4/8.
+- Do not put inspector state in the domain.
+- Do not claim GUI verification unless a window was inspected.
+
+---
+
+### [2026-09-20] — Task: Free isometric camera pan
+
+**Task**
+- Player can pan the camera freely: middle-mouse drag or mouse at screen edges.
+- Camera must not snap to hexes.
+
+**Done**
+- `IsoPoint` continuous isometric plane. `RenderProjection.ToIso` / `ApproximateCell`. `PresentationCamera` stores `IsoX`/`IsoY` and pans by float deltas.
+- Main: MMB drag pans 1:1 with mouse; edge-of-screen scroll at 420 iso units/s. `Confine` wraps X and clamps polar Y.
+- `WorldDebugMap` draws relative to camera iso, not `SimulationCursor`. Yellow ring is still the debug cursor. Preview map stays hex-locked to the selected person.
+- C / V / U look at person / building / settlement without attaching the camera to the grid afterwards.
+
+**Working / verified**
+- 249/249 domain tests pass with `-warnaserror`.
+- Solution build: 0 warnings / 0 errors.
+- Godot 4.7.2.stable.mono headless `--quit-after 45` exit 0.
+- Interactive MMB / edge pan was not inspected in a GUI window.
+
+**Tests**
+- `dotnet test tests/Cultures.Tests/Cultures.Tests.csproj -warnaserror` — PASS (249 passed, 0 failed). Previously 246; +3 camera/iso tests.
+- `dotnet build Cultures.sln -warnaserror` — PASS
+- Godot 4.7.2.stable.mono headless `--quit-after 45` — PASS (exit 0)
+
+**Bugs found**
+- `Refresh` used to `Follow` the debug cursor every frame, so the camera was hex-snapped even when pan existed.
+
+**Bugs fixed**
+- Camera position is independent of `SimulationCursor`.
+
+**Known limitations / TODO**
+- Zoom keys still change `PresentationCamera.Zoom` but the debug map blit size is a constant 22px tile.
+- GUI pan feel was not verified in a window.
+
+**Architecture decisions**
+- AD-132 play camera is free isometric pan
+- AD-106 updated: camera is `IsoX`/`IsoY`, not a hex
+
+**Next step**
+Pan in a real window. Do not invent war.
+
+**Notes for ChatGPT**
+- Do not `Follow` the cursor in `Refresh`.
+- Preview `FocusOverride` may stay hex-locked.
+- Do not claim GUI verification unless a window was inspected.
 
 

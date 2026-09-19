@@ -47,6 +47,22 @@ public sealed class RenderProjection
     public ScreenCoordinate ToScreen(LogicalGridCoordinate cell, ScreenCoordinate origin) =>
         ToScreen(ToIsometric(cell), origin);
 
+    public IsoPoint ToIso(LogicalGridCoordinate cell) => ToIsoUnwrapped(cell.X, cell.Y);
+
+    public IsoPoint ToIsoUnwrapped(int x, int y)
+    {
+        var stagger = (y & 1) * 0.5f;
+        return new IsoPoint(HexWidth * (x + stagger), HexDepth * VerticalScale * y);
+    }
+
+    public LogicalGridCoordinate ApproximateCell(float isoX, float isoY)
+    {
+        var row = (int)MathF.Round(isoY / (HexDepth * VerticalScale));
+        var stagger = (row & 1) * 0.5f;
+        var col = (int)MathF.Round(isoX / HexWidth - stagger);
+        return new LogicalGridCoordinate(col, row);
+    }
+
     public IsometricRenderCoordinate RelativeTo(LogicalGridCoordinate focus, LogicalGridCoordinate cell, int signedDx)
     {
         var unwrapped = new LogicalGridCoordinate(focus.X + signedDx, cell.Y);

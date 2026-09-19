@@ -15,18 +15,21 @@ public sealed class CharacterDecisionSystem
         GridNavigator navigator,
         ProductionSystem production,
         TeachingSystem teaching,
-        SocialLifeSystem? social = null)
+        SocialLifeSystem? social = null,
+        LaborSystem? labor = null)
     {
         Navigator = navigator ?? throw new ArgumentNullException(nameof(navigator));
         Production = production ?? throw new ArgumentNullException(nameof(production));
         Teaching = teaching ?? throw new ArgumentNullException(nameof(teaching));
         Social = social;
+        Labor = labor;
     }
 
     public GridNavigator Navigator { get; }
     public ProductionSystem Production { get; }
     public TeachingSystem Teaching { get; }
     public SocialLifeSystem? Social { get; set; }
+    public LaborSystem? Labor { get; set; }
 
     public ActionKind ChooseKind(CharacterState character)
     {
@@ -48,11 +51,9 @@ public sealed class CharacterDecisionSystem
         {
             if (CanEatNow(character))
                 return ActionKind.Eat;
-            if (Production.FindStorageWith(ResourceType.Food, 1) is not null)
+            if (FindEdibleStorage() is not null)
                 return ActionKind.Move;
-            if (Production.FindFreeWorkplace(character) is not null)
-                return AtAssignedWorkplace(character) ? ActionKind.Work : ActionKind.Move;
-            return ActionKind.Idle;
+            return WorkplaceKind(character);
         }
 
         if (character.Needs.Fatigue >= CharacterRules.FatigueCritical)
@@ -65,13 +66,16 @@ public sealed class CharacterDecisionSystem
 
         if (character.Needs.Hunger >= 0.45f && CanEatNow(character))
             return ActionKind.Eat;
-        if (character.Needs.Hunger >= 0.45f && Production.FindStorageWith(ResourceType.Food, 1) is not null)
+        if (character.Needs.Hunger >= 0.45f && FindEdibleStorage() is not null)
             return ActionKind.Move;
 
-        if (Production.FindFreeWorkplace(character) is not null)
-            return AtAssignedWorkplace(character) ? ActionKind.Work : ActionKind.Move;
+        if (character.IsPlayerCommanded)
+            return ActionKind.Idle;
 
-        return ActionKind.Idle;
+        if (Labor?.TryPlan(character, out var labor) == true)
+            return labor.Kind;
+
+        return WorkplaceKind(character);
     }
 
     public void AssignNext(CharacterState character)
@@ -108,11 +112,18 @@ public sealed class CharacterDecisionSystem
             case ActionKind.Work:
                 BeginWork(character);
                 break;
+            case ActionKind.Gather:
+            case ActionKind.Hunt:
+            case ActionKind.Construct:
+            case ActionKind.Haul:
+            case ActionKind.Scout:
+                BeginLabor(character);
+                break;
             case ActionKind.Move:
                 BeginMoveToNeed(character);
                 break;
             case ActionKind.Idle:
-                if (!TryBeginTeachingOrMove(character))
+                if (character.IsPlayerCommanded || !TryBeginTeachingOrMove(character))
                     character.Activity.Start(ActionKind.Idle, CharacterRules.IdleDurationTicks);
                 break;
             default:
@@ -146,14 +157,32 @@ public sealed class CharacterDecisionSystem
         var needed = ChooseKind(character);
         if (needed == character.Activity.Kind)
             return false;
+        if (character.IsPlayerCommanded && character.Activity.Kind == ActionKind.Move)
+            return needed is ActionKind.Eat or ActionKind.Sleep;
         return needed is ActionKind.Eat or ActionKind.Sleep;
+    }
+
+    private void BeginLabor(CharacterState character)
+    {
+        if (Labor?.TryPlan(character, out var plan) != true || plan.Kind is ActionKind.Move or ActionKind.Idle)
+        {
+            character.Activity.Start(ActionKind.Idle, CharacterRules.IdleDurationTicks);
+            return;
+        }
+
+        character.Activity.Start(
+            plan.Kind,
+            plan.DurationTicks,
+            plan.Target ?? character.Position,
+            jobResource: plan.Resource,
+            jobBuilding: plan.Building);
     }
 
     private void BeginEat(CharacterState character)
     {
-        if (!character.Inventory.Has(ResourceType.Food, 1))
+        if (!HasEdible(character.Inventory))
             TryTakeFood(character);
-        if (character.Inventory.Has(ResourceType.Food, 1))
+        if (HasEdible(character.Inventory))
         {
             character.Activity.Start(ActionKind.Eat, CharacterRules.EatDurationTicks);
             return;
@@ -194,12 +223,15 @@ public sealed class CharacterDecisionSystem
         if (character.Needs.Hunger >= CharacterRules.HungerCritical
             || character.Needs.Hunger >= 0.45f)
         {
-            if (!character.Inventory.Has(ResourceType.Food, 1))
-                target = Production.FindStorageWith(ResourceType.Food, 1)?.AccessCell;
+            if (!HasEdible(character.Inventory))
+                target = FindEdibleStorage()?.AccessCell;
         }
 
         if (target is null && character.Needs.Fatigue >= CharacterRules.FatigueCritical)
             target = FindPreferredShelter(character)?.AccessCell;
+
+        if (target is null && Labor?.TryPlan(character, out var labor) == true && labor.Target is { } jobTarget)
+            target = jobTarget;
 
         if (target is null)
         {
@@ -246,11 +278,33 @@ public sealed class CharacterDecisionSystem
 
     private bool CanEatNow(CharacterState character)
     {
-        if (character.Inventory.Has(ResourceType.Food, 1) || character.Inventory.Has(ResourceType.WildBerries, 1))
+        if (HasEdible(character.Inventory))
             return true;
         var here = Production.BuildingAtAccess(character.Position);
-        return here is { Definition.IsStorage: true }
-            && (here.Inventory.Has(ResourceType.Food, 1) || here.Inventory.Has(ResourceType.WildBerries, 1));
+        return here is { Definition.IsStorage: true } && HasEdible(here.Inventory);
+    }
+
+    private BuildingState? FindEdibleStorage()
+    {
+        foreach (var type in ResourceRules.Edible)
+        {
+            var storage = Production.FindStorageWith(type, 1);
+            if (storage is not null)
+                return storage;
+        }
+
+        return null;
+    }
+
+    private static bool HasEdible(Inventory inventory)
+    {
+        foreach (var type in ResourceRules.Edible)
+        {
+            if (inventory.Has(type, 1))
+                return true;
+        }
+
+        return false;
     }
 
     private bool CaregiverHasFood(CharacterState character)
@@ -259,7 +313,7 @@ public sealed class CharacterDecisionSystem
         {
             if (!caregiver.IsAlive)
                 continue;
-            if (caregiver.Inventory.Has(ResourceType.Food, 1) || caregiver.Inventory.Has(ResourceType.WildBerries, 1))
+            if (caregiver.Inventory.Has(ResourceType.Food, 1) || caregiver.Inventory.Has(ResourceType.WildBerries, 1) || HasEdible(caregiver.Inventory))
                 return true;
         }
 
@@ -277,27 +331,34 @@ public sealed class CharacterDecisionSystem
             TryTakeFoodFromCaregiver(character);
             return;
         }
-        if (!building.Inventory.TryTransferTo(character.Inventory, ResourceType.Food, 1))
-            building.Inventory.TryTransferTo(character.Inventory, ResourceType.WildBerries, 1);
+        foreach (var type in ResourceRules.Edible)
+        {
+            if (building.Inventory.TryTransferTo(character.Inventory, type, 1))
+                return;
+        }
     }
 
     private void TryTakeFoodFromCaregiver(CharacterState character)
     {
         foreach (var caregiver in FamilyQueries.CaregiversOf(Teaching.Population, character))
         {
-            if (caregiver.Inventory.TryTransferTo(character.Inventory, ResourceType.Food, 1))
-                return;
-            if (caregiver.Inventory.TryTransferTo(character.Inventory, ResourceType.WildBerries, 1))
-                return;
+            foreach (var type in ResourceRules.Edible)
+            {
+                if (caregiver.Inventory.TryTransferTo(character.Inventory, type, 1))
+                    return;
+            }
         }
     }
 
-    private bool AtAssignedWorkplace(CharacterState character)
+    private ActionKind WorkplaceKind(CharacterState character)
     {
-        if (!character.AssignedWorkplace.IsAssigned)
-            return false;
-        var access = Production.AccessFor(character.AssignedWorkplace);
-        return access is not null && character.Position.Equals(access.Value);
+        var workplace = Production.FindFreeWorkplace(character);
+        if (workplace is null)
+            return ActionKind.Idle;
+        var access = Production.AccessFor(workplace.Value);
+        if (access is not null && character.Position.Equals(access.Value))
+            return ActionKind.Work;
+        return ActionKind.Move;
     }
 
     private void DropStaleWorkplace(CharacterState character)

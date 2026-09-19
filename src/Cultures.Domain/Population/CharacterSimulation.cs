@@ -47,8 +47,16 @@ public sealed class CharacterSimulation
     public CharacterActionSystem Actions { get; }
     public CharacterDecisionSystem Decisions { get; }
     public ILodPolicy? Lod { get; set; }
+    public LaborSystem? Labor { get; private set; }
 
     public void AttachSocial(SocialLifeSystem social) => Decisions.Social = social;
+
+    public void AttachLabor(LaborSystem labor)
+    {
+        Labor = labor ?? throw new ArgumentNullException(nameof(labor));
+        Decisions.Labor = labor;
+        Actions.Labor = labor;
+    }
 
     public void Tick()
     {

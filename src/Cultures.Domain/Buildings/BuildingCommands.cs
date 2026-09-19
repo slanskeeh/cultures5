@@ -6,7 +6,10 @@ using Cultures.World;
 
 namespace Cultures.Buildings;
 
-public sealed record PlaceBuildingCommand(BuildingTypeId TypeId, LogicalGridCoordinate Origin) : ICommand;
+public sealed record PlaceBuildingCommand(
+    BuildingTypeId TypeId,
+    LogicalGridCoordinate Origin,
+    bool CompleteImmediately = true) : ICommand;
 
 public sealed record RemoveBuildingCommand(BuildingId Building) : ICommand;
 
@@ -25,7 +28,7 @@ public sealed class PlaceBuildingHandler : ICommandHandler<PlaceBuildingCommand>
 
     public CommandResult Handle(PlaceBuildingCommand command)
     {
-        var result = Placement.TryPlace(command.TypeId, command.Origin);
+        var result = Placement.TryPlace(command.TypeId, command.Origin, command.CompleteImmediately);
         if (!result.Success || result.Building is null)
             return CommandResult.Fail(result.Error ?? "Placement failed.");
 
