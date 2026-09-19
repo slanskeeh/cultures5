@@ -268,7 +268,7 @@ public static class SimulationPersistence
             var access = cells[0];
             foreach (var cell in cells)
             {
-                foreach (var (dx, dy) in new[] { (1, 0), (-1, 0), (0, 1), (0, -1) })
+                foreach (var (dx, dy) in HexGrid.NeighborOffsets(cell.Y))
                 {
                     var resolution = host.World.Topology.Resolve(cell.X + dx, cell.Y + dy);
                     if (resolution.TryGetCell(out var neighbor) && host.World.Grid.GetCell(neighbor).Passable)

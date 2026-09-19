@@ -25,5 +25,5 @@ public static class CharacterRules
     public const int WorkDurationTicks = 24;
     public const int IdleDurationTicks = 8;
     public const float StarvationDamagePerDay = 0.20f;
-    public const int PathSearchLimit = 120;
+    public const int PathSearchLimit = 256;
 }

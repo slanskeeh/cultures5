@@ -11,7 +11,7 @@ public enum MovementBlock : byte
 }
 
 /// <summary>
-/// Wrap-aware 4-direction grid navigation. Replaceable later; not a world-scale pathfinder.
+/// Wrap-aware hex-grid navigation. Replaceable later; not a world-scale pathfinder.
 /// </summary>
 public sealed class GridNavigator
 {
@@ -61,14 +61,11 @@ public sealed class GridNavigator
 
     public IEnumerable<LogicalGridCoordinate> PassableNeighbors(LogicalGridCoordinate cell)
     {
-        if (TryNeighbor(cell, 1, 0, out var east, out _))
-            yield return east;
-        if (TryNeighbor(cell, -1, 0, out var west, out _))
-            yield return west;
-        if (TryNeighbor(cell, 0, -1, out var north, out _))
-            yield return north;
-        if (TryNeighbor(cell, 0, 1, out var south, out _))
-            yield return south;
+        foreach (var (dx, dy) in HexGrid.NeighborOffsets(cell.Y))
+        {
+            if (TryNeighbor(cell, dx, dy, out var next, out _))
+                yield return next;
+        }
     }
 
     public List<LogicalGridCoordinate>? FindPath(LogicalGridCoordinate from, LogicalGridCoordinate to)
@@ -77,26 +74,32 @@ public sealed class GridNavigator
             return [];
 
         var cameFrom = new Dictionary<LogicalGridCoordinate, LogicalGridCoordinate>();
-        var queue = new Queue<LogicalGridCoordinate>();
-        queue.Enqueue(from);
-        cameFrom[from] = from;
-        var visited = 1;
+        var cost = new Dictionary<LogicalGridCoordinate, int> { [from] = 0 };
+        var open = new PriorityQueue<LogicalGridCoordinate, int>();
+        open.Enqueue(from, World.Topology.HexDistance(from, to));
+        var closed = new HashSet<LogicalGridCoordinate>();
+        var expansions = 0;
 
-        while (queue.Count > 0 && visited < CharacterRules.PathSearchLimit)
+        while (open.Count > 0 && expansions < CharacterRules.PathSearchLimit)
         {
-            var current = queue.Dequeue();
+            var current = open.Dequeue();
+            if (!closed.Add(current))
+                continue;
+
+            expansions++;
+            if (current.Equals(to))
+                return Reconstruct(cameFrom, from, to);
+
+            var g = cost[current];
             foreach (var next in PassableNeighbors(current))
             {
-                if (!cameFrom.TryAdd(next, current))
+                var tentative = g + 1;
+                if (cost.TryGetValue(next, out var existing) && tentative >= existing)
                     continue;
 
-                visited++;
-                if (next.Equals(to))
-                    return Reconstruct(cameFrom, from, to);
-
-                queue.Enqueue(next);
-                if (visited >= CharacterRules.PathSearchLimit)
-                    break;
+                cameFrom[next] = current;
+                cost[next] = tentative;
+                open.Enqueue(next, tentative + World.Topology.HexDistance(next, to));
             }
         }
 

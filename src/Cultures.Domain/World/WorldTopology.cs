@@ -85,4 +85,16 @@ public sealed class WorldTopology
             delta += width;
         return delta;
     }
+
+    public int HexDistance(LogicalGridCoordinate a, LogicalGridCoordinate b) =>
+        HexGrid.Distance(a, b, Configuration.Width);
+
+    public IEnumerable<LogicalGridCoordinate> HexNeighbors(LogicalGridCoordinate cell)
+    {
+        foreach (var (dx, dy) in HexGrid.NeighborOffsets(cell.Y))
+        {
+            if (TryGetCell(new WorldCoordinate(cell.X + dx, cell.Y + dy), out var neighbor))
+                yield return neighbor;
+        }
+    }
 }

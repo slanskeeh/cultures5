@@ -397,12 +397,18 @@ public sealed class SettlementSystem
     {
         var countX = World.Configuration.ChunkCountX;
         var countY = World.Configuration.ChunkCountY;
-        yield return new ChunkCoordinate(WorldTopology.EuclideanMod(chunk.X + 1, countX), chunk.Y);
-        yield return new ChunkCoordinate(WorldTopology.EuclideanMod(chunk.X - 1, countX), chunk.Y);
-        if (chunk.Y > 0)
-            yield return new ChunkCoordinate(chunk.X, chunk.Y - 1);
-        if (chunk.Y + 1 < countY)
-            yield return new ChunkCoordinate(chunk.X, chunk.Y + 1);
+        for (var dy = -1; dy <= 1; dy++)
+        {
+            var y = chunk.Y + dy;
+            if (y < 0 || y >= countY)
+                continue;
+            for (var dx = -1; dx <= 1; dx++)
+            {
+                if (dx == 0 && dy == 0)
+                    continue;
+                yield return new ChunkCoordinate(WorldTopology.EuclideanMod(chunk.X + dx, countX), y);
+            }
+        }
     }
 
     private static int CompareClusters(OccupancyCluster a, OccupancyCluster b)

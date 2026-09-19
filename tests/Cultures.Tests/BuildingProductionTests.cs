@@ -233,7 +233,7 @@ public sealed class ProductionAndWorkplaceTests
         var access = host.Production.AccessFor(workplace.Value);
         Assert.NotNull(access);
         var path = host.Characters.Navigator.FindPath(character.Position, access.Value);
-        Assert.NotNull(path);
+        Assert.True(path is not null, $"no hex path {character.Position} -> {access}");
         character.Activity.Start(ActionKind.Move, path!.Count, access);
         foreach (var step in path)
             character.Activity.RemainingPath.Enqueue(step);

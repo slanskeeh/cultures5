@@ -20,7 +20,7 @@ The technical architecture must support future complexity without requiring the 
 - Language: C#
 - Runtime target: .NET 8 initially
 - Rendering: Godot 2D
-- Visual style: pixel art, isometric/pseudo-isometric
+- Visual style: 2.5D hex sprites (2D textures with extrusion/shadows); isometric camera at 60° from the ground
 - Source control: Git
 - Tests: xUnit
 - Data: typed C# runtime models + data definitions

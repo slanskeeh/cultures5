@@ -11,7 +11,7 @@ public readonly record struct WorldCoordinate(int X, int Y)
 
 /// <summary>
 /// A cell known to lie on the logical grid after horizontal wrap and vertical bounds checks.
-/// Phase 1 uses a 1:1 mapping from a valid world cell to a grid cell (OD-002 still open).
+/// Offset coordinates address pointy-top odd-r hexes (AD-123).
 /// </summary>
 public readonly record struct LogicalGridCoordinate(int X, int Y)
 {

@@ -1194,5 +1194,61 @@ Numbered roadmap is complete through Phase 19. Next work is balance, war, or pol
 - Do not bump generation version just to add biome labels.
 - Do not claim an exported game was shipped unless `Godot --export` actually ran.
 - Do not claim GUI verification unless a window was inspected.
+- Do not revert the hex grid to squares. OD-002 is closed (AD-123).
+
+---
+
+### [2026-09-20] — Task: Hex field, 60° isometric camera, 2.5D tiles
+
+**Task**
+- Change architecture so the map is a Civilization-like hex field, with an isometric camera at about 60° and 2.5D (2D textures that read as volume via sides and shadows).
+
+**Done**
+- Domain: `HexGrid` pointy-top odd-r offsets, cube distance, wrap-aware hex distance, six neighbors.
+- `GridNavigator` is wrap-aware hex A* (hex-distance heuristic). Building access, fishery water check, and building restore use hex neighbors.
+- Settlement chunk BFS uses 8-neighborhood so hex-adjacent chunk corners are not split.
+- `RenderProjection` maps hexes with `sin(60°)` vertical scale. Debug map draws hexes back-to-front and uses 2.5D procedural textures (extrusion + drop shadow).
+- OD-002 closed. AD-123..AD-125. AD-032 updated to hex A*.
+
+**Working / verified**
+- 230/230 domain tests pass with `-warnaserror`.
+- Solution build: 0 warnings / 0 errors.
+- Godot 4.7.2.stable.mono headless `--quit-after 45` exit 0.
+- Interactive hex look was not inspected in a GUI window.
+
+**Tests**
+- `dotnet test tests/Cultures.Tests/Cultures.Tests.csproj -warnaserror` — PASS (230 passed, 0 failed). Previously 224; +6 hex/projection/path tests.
+- `dotnet build Cultures.sln -warnaserror` — PASS
+- Godot 4.7.2.stable.mono headless `--quit-after 45` — PASS (exit 0)
+
+**Bugs found**
+- Hex BFS with six neighbors exhausted `PathSearchLimit` (120) before reaching a farm 9 cells east (`Grid(7,25)` → `Grid(16,25)`). Square 4-connect visited fewer cells per ring, so the same commute worked before.
+
+**Bugs fixed**
+- `GridNavigator.FindPath` is hex A* with wrap-aware hex heuristic; search limit raised to 256.
+- Hex polyline outlines close the loop (repeat first vertex).
+- Godot `Color` alpha uses constructor, not `with`.
+
+**Known limitations / TODO**
+- Arrow keys still move on four of six hex axes (E/W and N/S).
+- Final atlas/art still open (OD-006).
+- Multi-cell building footprints remain 1×1 hex.
+- Saved 4-neighbor paths from older sessions are not migrated.
+
+**Architecture decisions**
+- AD-123 hex logical grid
+- AD-124 60° isometric projection
+- AD-125 2.5D sprites
+- AD-032 hex A* navigator
+- OD-002 closed
+
+**Next step**
+Continue playtest polish. Do not invent war or a 3D mesh world.
+
+**Notes for ChatGPT**
+- Simulation positions stay `LogicalGridCoordinate`. Never pathfind in Godot pixels.
+- Do not bump generation version for this visual/topology change.
+- Do not claim GUI verification unless a window was inspected.
+
 
 

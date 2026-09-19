@@ -78,7 +78,7 @@ View:
 
 Never put authoritative hunger, inventory, family, profession or history only in a Node.
 
-Presentation selection and camera live in Application (`PresentationCamera`, `PresentationSelection`). Godot draws from domain IDs. The debug map uses procedural 32×32 textures for biomes, buildings and life stages; this is not final art. Exploration overlay must not leak raw unexplored terrain facts.
+Presentation selection and camera live in Application (`PresentationCamera`, `PresentationSelection`). Godot draws from domain IDs. The debug map uses procedural 64×64 2.5D hex textures for biomes, buildings and life stages; this is not final art. Exploration overlay must not leak raw unexplored terrain facts.
 
 ## 4. Stable IDs
 
@@ -188,9 +188,9 @@ Godot is responsible for:
 - asset loading;
 - presentation.
 
-Debug presentation currently paints procedural `ImageTexture` tiles (`SimpleTextures`) instead of a final atlas. Camera zoom is presentation-only and does not move `SimulationCursor`. F5/F9 save slots, F1 help, F11 high contrast, and F12 HUD size are presentation.
+Debug presentation currently paints procedural 2.5D hex `ImageTexture` tiles (`SimpleTextures`) from a 60° isometric projection. Camera zoom is presentation-only and does not move `SimulationCursor`. F5/F9 save slots, F1 help, F11 high contrast, and F12 HUD size are presentation.
 
-Godot's TileSet/TileMapLayer systems support isometric tile shapes, but the project's authoritative logical grid remains our own domain model. Godot's tile tools are therefore a presentation/authoring aid, not the simulation source of truth. citeturn0search6
+Godot does not own the hex grid. The authoritative cell is `LogicalGridCoordinate` (AD-123). Godot's tile tools are a presentation/authoring aid, not the simulation source of truth.
 
 ## 10. Threading
 

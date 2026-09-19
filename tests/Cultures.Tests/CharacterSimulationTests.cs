@@ -143,12 +143,12 @@ public sealed class CharacterMovementTests
         var world = new LogicalWorld(WorldConfiguration.DebugSample, 1);
         var navigator = new GridNavigator(world);
         var land = PopulationSpawner.FindLandOrigin(world);
-        foreach (var dir in new[] { (1, 0), (-1, 0), (0, 1), (0, -1) })
+        foreach (var (dx, dy) in HexGrid.NeighborOffsets(land.Y))
         {
-            if (navigator.TryNeighbor(land, dir.Item1, dir.Item2, out _, out var block))
+            if (navigator.TryNeighbor(land, dx, dy, out _, out var block))
                 continue;
 
-            var resolution = world.Topology.Resolve(land.X + dir.Item1, land.Y + dir.Item2);
+            var resolution = world.Topology.Resolve(land.X + dx, land.Y + dy);
             if (resolution.TryGetCell(out var cell) && world.Grid.GetCell(cell).IsWater)
             {
                 Assert.Equal(MovementBlock.Terrain, block);

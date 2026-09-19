@@ -10,13 +10,15 @@ using Godot;
 namespace Cultures.Presentation;
 
 /// <summary>
-/// Orthographic debug map of generated terrain. Domain remains authoritative.
+/// Isometric 2.5D hex debug map. Domain remains authoritative.
 /// </summary>
 public partial class WorldDebugMap : Control
 {
     public const int CellSize = 22;
     public const int RadiusX = 16;
     public const int RadiusY = 10;
+
+    private readonly RenderProjection _projection = RenderProjection.Playtest;
 
     public SimulationHost? Host { get; set; }
     public bool HighContrast { get; set; }
@@ -41,22 +43,11 @@ public partial class WorldDebugMap : Control
         {
             for (var dx = -RadiusX; dx <= RadiusX; dx++)
             {
-                var rect = new Rect2(
-                    center.X + dx * CellSize - CellSize * 0.5f,
-                    center.Y + dy * CellSize - CellSize * 0.5f,
-                    CellSize - 1,
-                    CellSize - 1);
-
                 var resolution = topology.Resolve(cursor.X + dx, cursor.Y + dy);
-                if (!resolution.IsInsideWorld)
+                var screen = Project(center, cursor, new LogicalGridCoordinate(cursor.X + dx, cursor.Y + dy));
+                if (!resolution.IsInsideWorld || !resolution.TryGetCell(out var cell))
                 {
-                    DrawRect(rect, new Color(0.12f, 0.07f, 0.07f));
-                    continue;
-                }
-
-                if (!resolution.TryGetCell(out var cell))
-                {
-                    DrawRect(rect, new Color(0.12f, 0.07f, 0.07f));
+                    DrawColoredPolygon(HexAt(screen), new Color(0.12f, 0.07f, 0.07f));
                     continue;
                 }
 
@@ -66,26 +57,30 @@ public partial class WorldDebugMap : Control
                     var color = ColorFromKnowledge(host, paintChunk);
                     if (ShowLod && host.Exploration.LevelOf(paintChunk) != ExplorationKnowledgeLevel.Unknown)
                         color = color.Lerp(ColorForLod(host.Lod.Classify(paintChunk)), 0.35f);
-                    DrawRect(rect, color);
+                    DrawColoredPolygon(HexAt(screen), color);
                 }
                 else
                 {
-                    DrawTextureRect(SimpleTextures.Biome(host.World.Grid.GetCell(cell).Biome), rect, false);
+                    var textureSize = new Vector2(SimpleTextures.Tile, SimpleTextures.Tile);
+                    DrawTextureRect(
+                        SimpleTextures.Biome(host.World.Grid.GetCell(cell).Biome),
+                        new Rect2(screen - textureSize * 0.5f, textureSize),
+                        false);
                     if (HighContrast)
-                        DrawRect(rect, new Color(1f, 1f, 1f, 0.45f), filled: false, width: 1);
+                        DrawPolyline(HexAt(screen, 0.92f, closed: true), new Color(1f, 1f, 1f, 0.55f), 1.2f, true);
                     var terrain = host.World.Grid.GetCell(cell);
                     if (terrain.HasRiver)
-                        DrawRect(rect, new Color(0.20f, 0.45f, 0.72f, 0.35f));
+                        DrawColoredPolygon(HexAt(screen, 0.42f), new Color(0.20f, 0.45f, 0.72f, 0.40f));
                     if (terrain.IsOccupied)
-                        DrawRect(rect, new Color(0.85f, 0.55f, 0.18f, 0.25f));
+                        DrawColoredPolygon(HexAt(screen, 0.55f), new Color(0.85f, 0.55f, 0.18f, 0.22f));
                     if (cell.X == 0 || cell.X == width - 1)
-                        DrawRect(rect, new Color(1, 1, 1, 0.08f));
+                        DrawPolyline(HexAt(screen, 0.98f, closed: true), new Color(1, 1, 1, 0.10f), 1, true);
                     if (ShowLod)
-                        DrawRect(rect, ColorForLod(host.Lod.Classify(paintChunk)) with { A = 0.28f });
+                        DrawColoredPolygon(HexAt(screen, 0.88f), new Color(ColorForLod(host.Lod.Classify(paintChunk)), 0.22f));
                 }
 
                 if (dx == 0 && dy == 0)
-                    DrawRect(rect, new Color(0.95f, 0.86f, 0.45f), filled: false, width: 2);
+                    DrawPolyline(HexAt(screen, 1.05f, closed: true), new Color(0.95f, 0.86f, 0.45f), 2.2f, true);
             }
         }
 
@@ -112,13 +107,11 @@ public partial class WorldDebugMap : Control
             if (Math.Abs(dx) > RadiusX || Math.Abs(dy) > RadiusY)
                 continue;
 
-            var pos = new Vector2(
-                center.X + dx * CellSize,
-                center.Y + dy * CellSize);
+            var pos = Project(center, cursor, settlement.Core);
             var color = ColorForSettlement(settlement.Id, settlement.Lifecycle);
-            DrawArc(pos, CellSize * 0.7f, 0, MathF.Tau, 20, color, 2);
+            DrawArc(pos, CellSize * 0.55f, 0, MathF.Tau, 20, color, 2);
             if (SelectedSettlementId == settlement.Id)
-                DrawArc(pos, CellSize * 0.95f, 0, MathF.Tau, 24, new Color(1f, 1f, 0.55f), 2);
+                DrawArc(pos, CellSize * 0.78f, 0, MathF.Tau, 24, new Color(1f, 1f, 0.55f), 2);
         }
     }
 
@@ -149,17 +142,11 @@ public partial class WorldDebugMap : Control
                 if (Math.Abs(dx) > RadiusX || Math.Abs(dy) > RadiusY)
                     continue;
 
-                var pos = new Vector2(
-                    center.X + dx * CellSize,
-                    center.Y + dy * CellSize);
-                var sprite = new Rect2(pos.X - CellSize * 0.4f, pos.Y - CellSize * 0.4f, CellSize * 0.8f, CellSize * 0.8f);
+                var pos = Project(center, cursor, cell);
+                var sprite = new Rect2(pos.X - 28, pos.Y - 32, SimpleTextures.Tile * 0.85f, SimpleTextures.Tile * 0.85f);
                 DrawTextureRect(SimpleTextures.Building(building.TypeId), sprite, false);
                 if (SelectedBuildingId == building.Id)
-                    DrawRect(
-                        new Rect2(pos.X - CellSize * 0.5f, pos.Y - CellSize * 0.5f, CellSize, CellSize),
-                        new Color(1f, 1f, 1f),
-                        filled: false,
-                        width: 2);
+                    DrawPolyline(HexAt(pos, 0.72f, closed: true), new Color(1f, 1f, 1f), 2, true);
             }
         }
     }
@@ -176,13 +163,11 @@ public partial class WorldDebugMap : Control
             if (Math.Abs(dx) > RadiusX || Math.Abs(dy) > RadiusY)
                 continue;
 
-            var pos = new Vector2(
-                center.X + dx * CellSize,
-                center.Y + dy * CellSize);
-            var sprite = new Rect2(pos.X - CellSize * 0.45f, pos.Y - CellSize * 0.45f, CellSize * 0.9f, CellSize * 0.9f);
+            var pos = Project(center, cursor, character.Position);
+            var sprite = new Rect2(pos.X - 26, pos.Y - 34, SimpleTextures.Tile * 0.82f, SimpleTextures.Tile * 0.82f);
             DrawTextureRect(SimpleTextures.Character(character.LifeStage, SelectedId == character.Id), sprite, false);
             if (character.Settlement.IsAssigned)
-                DrawArc(pos, CellSize * 0.42f, 0, MathF.Tau, 12, ColorForSettlement(character.Settlement, SettlementLifecycle.Established));
+                DrawArc(pos, CellSize * 0.38f, 0, MathF.Tau, 12, ColorForSettlement(character.Settlement, SettlementLifecycle.Established));
         }
     }
 
@@ -245,4 +230,30 @@ public partial class WorldDebugMap : Control
         ExplorationKnowledgeLevel.Analyzed => new Color(0.75f, 0.72f, 0.35f),
         _ => new Color(0.05f, 0.05f, 0.07f)
     };
+
+    private Vector2 Project(Vector2 center, LogicalGridCoordinate cursor, LogicalGridCoordinate cell)
+    {
+        var dx = Host!.World.Topology.SignedHorizontalDelta(cursor.X, cell.X);
+        var rel = _projection.RelativeTo(cursor, cell, dx);
+        return new Vector2(center.X + rel.X, center.Y + rel.Y);
+    }
+
+    private Vector2[] HexAt(Vector2 origin, float scale = 1f, bool closed = false)
+    {
+        var size = _projection.HexSize * scale;
+        var count = closed ? 7 : 6;
+        var verts = new Vector2[count];
+        for (var i = 0; i < 6; i++)
+        {
+            var angle = (60 * i - 30) * MathF.PI / 180f;
+            verts[i] = origin + new Vector2(
+                size * MathF.Cos(angle),
+                size * MathF.Sin(angle) * _projection.VerticalScale);
+        }
+
+        if (closed)
+            verts[6] = verts[0];
+
+        return verts;
+    }
 }

@@ -18,8 +18,6 @@ public sealed class PlacementResult
 /// </summary>
 public sealed class BuildingPlacementSystem
 {
-    private static readonly (int Dx, int Dy)[] AccessOrder = [(1, 0), (-1, 0), (0, 1), (0, -1)];
-
     public BuildingPlacementSystem(
         LogicalWorld world,
         BuildingDirectory buildings,
@@ -125,7 +123,7 @@ public sealed class BuildingPlacementSystem
         var occupied = footprint.ToHashSet();
         foreach (var cell in footprint)
         {
-            foreach (var (dx, dy) in AccessOrder)
+            foreach (var (dx, dy) in HexGrid.NeighborOffsets(cell.Y))
             {
                 var resolution = World.Topology.Resolve(cell.X + dx, cell.Y + dy);
                 if (!resolution.TryGetCell(out var neighbor) || occupied.Contains(neighbor))
@@ -149,7 +147,7 @@ public sealed class BuildingPlacementSystem
         var occupied = footprint.ToHashSet();
         foreach (var cell in footprint)
         {
-            foreach (var (dx, dy) in AccessOrder)
+            foreach (var (dx, dy) in HexGrid.NeighborOffsets(cell.Y))
             {
                 var resolution = World.Topology.Resolve(cell.X + dx, cell.Y + dy);
                 if (!resolution.TryGetCell(out var neighbor) || occupied.Contains(neighbor))

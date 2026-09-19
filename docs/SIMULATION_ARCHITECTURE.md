@@ -221,7 +221,7 @@ Phase 6 implements settlements as persistent groupings that emerge from living c
 
 Detection:
 - occupied chunks (people and active buildings);
-- 4-neighbour connected components with horizontal chunk wrap;
+- 8-neighbour connected components with horizontal chunk wrap (so hex-adjacent chunk corners are not split; AD-123);
 - qualification: enough people, enough buildings, shelter and storage;
 - periodic evaluation (not every tick, not O(N²) pairwise).
 
@@ -385,7 +385,7 @@ Lifecycle is Active / Disbanded. Disbanding clears memberships. There is no comb
 
 Hostile diplomacy is not war. Military commands do not change diplomacy, politics, exploration, LOD, or resources. `SimulationHost.Step` does not tick military.
 
-World cell identity remains `LogicalGridCoordinate` (OD-002). Military does not encode neighbor topology and is compatible with a future hexagonal cell set.
+World cell identity remains `LogicalGridCoordinate` as pointy-top odd-r hex offset (AD-123). Military does not encode a private grid.
 
 ## 19. Save/load
 

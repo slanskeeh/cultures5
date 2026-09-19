@@ -197,7 +197,7 @@ Status: Accepted
 `WorldCoordinate`, `LogicalGridCoordinate`, `ChunkCoordinate`, `ChunkLocalCoordinate`, `IsometricRenderCoordinate` and `ScreenCoordinate` are separate types. After wrap + bounds, a valid world cell maps 1:1 to a logical grid cell.
 
 Reason:
-Matches WORLD_ARCHITECTURE coordinate spaces. Sub-cell positions and final tile geometry remain OD-002.
+Matches WORLD_ARCHITECTURE coordinate spaces. Sub-cell positions remain open. Tile geometry is hex (AD-123).
 
 ## AD-023 — Grid-authoritative occupancy
 
@@ -284,7 +284,7 @@ Future actions can reuse the same progress/interrupt model without a DoEverythin
 
 Status: Accepted
 
-Phase 3 movement is 4-direction BFS with a small search limit, using `WorldTopology` wrap. Water is impassable. The navigator is a seam, not the final pathfinder.
+Phase 3 movement is wrap-aware hex A* (six neighbors, hex-distance heuristic) with a small search limit, using `WorldTopology` wrap. Water is impassable. The navigator is a seam, not the final pathfinder. Hex branching made naive BFS exhaust the budget before reaching nearby workplaces (AD-123).
 
 Reason:
 The prompt forbids world-scale pathfinding now but requires a replaceable API.
@@ -403,7 +403,9 @@ Replace the Phase 3 work→personal-food and sleep-anywhere loops.
 Not fixed yet.
 
 ### OD-002 — Exact tile/grid geometry
-Not fixed yet.
+**Status:** Closed
+
+Pointy-top odd-r hexes. `LogicalGridCoordinate` is offset (column X, row Y). Six neighbors. Camera elevation 60° from the ground plane. Presentation is 2.5D (AD-123..AD-125).
 
 ### OD-003 — Exact character lifespan
 Not fixed yet.
@@ -417,7 +419,9 @@ Foundation exists; final gameplay pacing not fixed.
 Versioned JSON `SaveEnvelope` v4 is the current format (AD-107, AD-118). Final binary/compressed strategy is not fixed.
 
 ### OD-006 — Exact rendering pipeline
-Godot 2D is accepted; final TileMap/atlas/animation conventions are not fixed.
+**Status:** Open (partial)
+
+Godot 2D Control drawing of procedural 2.5D hex textures is accepted. Final TileMap/atlas/animation conventions are not fixed.
 
 ### OD-007 — Exact number of starting factions
 Not fixed.
@@ -691,7 +695,7 @@ Partnership (`FormPartnershipCommand`) and household-aware birth exist. Fertilit
 
 Status: Accepted
 
-A settlement is created when a wrap-aware connected component of occupied chunks has enough living people, active buildings, shelter, and storage. Detection uses chunk 4-neighbour BFS, not pairwise character scans.
+A settlement is created when a wrap-aware connected component of occupied chunks has enough living people, active buildings, shelter, and storage. Detection uses chunk 8-neighbour BFS (AD-123), not pairwise character scans.
 
 Reason:
 Settlements must be a consequence of co-location and infrastructure, not a placed map object (AD-013).
@@ -1123,7 +1127,7 @@ Automatic combat, recruitment, or political fallout belongs to later phases.
 
 Status: Accepted
 
-Units have no location, path, or chunk ownership. `LogicalGridCoordinate` remains the world-cell type (OD-002). Military code does not encode 4-neighbor adjacency, Chebyshev distance, or a private grid.
+Units have no location, path, or chunk ownership. `LogicalGridCoordinate` remains the world-cell type (now hex offset, AD-123). Military code does not encode a private grid.
 
 Reason:
 Movement and hex conversion are out of scope. Future occupancy can attach world cells without rewriting military identity.
@@ -1307,6 +1311,33 @@ Status: Accepted
 
 Reason:
 Emergent chronology without scripted quests or automatic disasters.
+
+## AD-123 — Logical grid is pointy-top hex
+
+Status: Accepted
+
+Simulation cells are pointy-top odd-r hexes stored as offset `(X column, Y row)`. `HexGrid` owns cube conversion, six neighbor offsets, and wrap-aware hex distance. Horizontal wrap and polar Y termination are unchanged. Chunks remain rectangular blocks of offset cells; settlement chunk BFS uses 8-neighborhood so hex-adjacent border cells are not split.
+
+Reason:
+The player asked for a Civilization-like hex field. Square 4-neighborhood was a Phase 1 placeholder (OD-002).
+
+## AD-124 — Presentation camera is 60° isometric hex
+
+Status: Accepted
+
+`RenderProjection` maps offset hexes to screen with pointy-top layout and `VerticalScale = sin(60°) ` (elevation from the ground plane). This math is not simulation position. Zoom remains presentation-only.
+
+Reason:
+A 60° strategy view compresses depth without becoming a true 3D scene.
+
+## AD-125 — Graphics are 2.5D hex sprites
+
+Status: Accepted
+
+Debug tiles are 2D textures with baked extrusion, side faces, and drop shadows. Godot does not own cell occupancy. Final atlas/art is still later (OD-006).
+
+Reason:
+Volume should read from lighting/shadow on 2D art, not from a 3D mesh world.
 
 ## OD-023 — Exact LOD radii and cadences
 

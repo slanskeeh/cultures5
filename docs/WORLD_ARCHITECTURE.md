@@ -19,7 +19,7 @@ Keep these separate:
 
 WorldCoordinate
 ChunkCoordinate
-LogicalGridCoordinate
+LogicalGridCoordinate (offset hex column/row)
 IsometricRenderCoordinate
 ScreenCoordinate
 
@@ -141,7 +141,7 @@ It must support:
 - elevation;
 - future transport types.
 
-The first prototype can use simple grid pathfinding.
+The first prototype uses wrap-aware hex A* (`GridNavigator`, AD-123). Pathfinding is on `LogicalGridCoordinate`, never on Godot pixels.
 
 ## 11. Discovery
 
@@ -165,18 +165,18 @@ Tile-level fog, landmarks and the player map are not in Phase 8.
 
 Factions and cultures are not geography. A faction does not own chunks where its members stand. Creating a faction does not reveal exploration knowledge.
 
-Military units also do not own chunks or cells. Phase 12 stores no unit occupancy. If a later phase adds a location, it must use existing world-cell identity (`LogicalGridCoordinate`; OD-002), not a military-specific grid and not neighbor math.
+Military units also do not own chunks or cells. Phase 12 stores no unit occupancy. If a later phase adds a location, it must use existing world-cell identity (`LogicalGridCoordinate` hex offset; AD-123), not a military-specific grid.
 
 ## 12. Rendering
 
 The desired visual direction is:
-- pixel art;
-- simple textures;
-- top-down angled/isometric;
+- 2.5D hex field (Civilization-like);
+- isometric camera at 60° from the ground;
+- 2D textures with extrusion and drop shadows;
 - readable silhouettes;
 - limited visual noise.
 
-Phase 13 debug map paints procedural 32×32 `ImageTexture` tiles for biomes, building types, and character life stages (`SimpleTextures`). Not final art. Unexplored cells use knowledge colors only; raw biome is not leaked.
+Debug map projects pointy-top hexes through `RenderProjection` and paints procedural 2.5D tiles (`SimpleTextures`). Not final art. Unexplored cells use knowledge colors only; raw biome is not leaked.
 
 Large visual assets can occupy multiple logical cells. Camera zoom is presentation-only.
 

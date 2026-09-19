@@ -15,9 +15,9 @@ This package refines the initial Bible into a concrete technical foundation for 
 Godot 4.x + C#/.NET is the current implementation direction. Godot provides a dedicated .NET editor/runtime path for C# projects; current documentation notes that C# projects require the .NET-enabled Godot editor and .NET SDK. Desktop export is supported, while web export is not currently supported for Godot 4 C# projects. citeturn0search0turn0search3
 
 The game will use:
-- pixel-art presentation;
-- isometric/pseudo-isometric view;
-- logical grid independent from rendering;
+- 2.5D hex presentation (2D textures with volume from sides and shadows);
+- isometric camera at about 60° from the ground;
+- Civilization-like hexagonal logical grid, independent from rendering;
 - simulation-first architecture;
 - deterministic procedural generation;
 - chunks and simulation LOD;
